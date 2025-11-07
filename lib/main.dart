@@ -4,18 +4,28 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/main_screen.dart';
 
 import 'package:media_kit/media_kit.dart';
 
-void main() {
+void main() async {
   debugPrint('[main] App starting...');
-  debugRepaintRainbowEnabled=true;
+  debugRepaintRainbowEnabled = true;
+  final prefs = await SharedPreferences.getInstance();
   WidgetsFlutterBinding.ensureInitialized();
   // Initialize MediaKit for video playback capabilities.
   // 初始化 MediaKit 以支持视频播放功能。
   MediaKit.ensureInitialized();
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        // 直接提供已加载的实例，后续所有 provider 同步可用
+        sharedPreferencesProvider.overrideWithValue(AsyncValue.data(prefs)),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends ConsumerWidget {
@@ -42,18 +52,22 @@ class MyApp extends ConsumerWidget {
 
         // Accent color (used for FAB, Slider, etc.).
         // 强调色（用于浮动操作按钮、滑块等）。
-        colorScheme: ColorScheme.fromSwatch(
-          primarySwatch: Colors.deepPurple,
-          brightness: Brightness.dark,
-        ).copyWith(
-          secondary: Colors.tealAccent[400], // A bright contrasting color.
-        ),
+        colorScheme:
+            ColorScheme.fromSwatch(
+              primarySwatch: Colors.deepPurple,
+              brightness: Brightness.dark,
+            ).copyWith(
+              secondary: Colors.tealAccent[400], // A bright contrasting color.
+            ),
 
         // Background colors.
         // 背景颜色。
-        scaffoldBackgroundColor: const Color(0xFF1A1A1A), // Slightly brighter background.
-        canvasColor: const Color(0xFF2C2C2C), // Significantly brighter card color.
-        
+        scaffoldBackgroundColor: const Color(
+          0xFF1A1A1A,
+        ), // Slightly brighter background.
+        canvasColor: const Color(
+          0xFF2C2C2C,
+        ), // Significantly brighter card color.
         // AppBar theme.
         // AppBar 主题。
         appBarTheme: const AppBarTheme(
@@ -64,9 +78,7 @@ class MyApp extends ConsumerWidget {
             fontSize: 20,
             fontWeight: FontWeight.w500,
           ),
-          iconTheme: IconThemeData(
-            color: Color.fromRGBO(255, 255, 255, 0.87),
-          ),
+          iconTheme: IconThemeData(color: Color.fromRGBO(255, 255, 255, 0.87)),
         ),
 
         // Bottom navigation bar theme.
@@ -86,7 +98,12 @@ class MyApp extends ConsumerWidget {
             borderRadius: BorderRadius.circular(8.0),
             borderSide: BorderSide.none, // No border by default.
           ),
-          fillColor: const Color.fromRGBO(255, 255, 255, 0.1), // Default fill color.
+          fillColor: const Color.fromRGBO(
+            255,
+            255,
+            255,
+            0.1,
+          ), // Default fill color.
           filled: true,
           hintStyle: TextStyle(color: Colors.grey[500]),
         ),

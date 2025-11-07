@@ -28,7 +28,7 @@ class ImageMeta with _$ImageMeta {
   const factory ImageMeta({
     @JsonKey(name: 'prompt') String? prompt,
     @JsonKey(name: 'negativePrompt') String? negativePrompt,
-    @Default([]) List<String> tags,
+    @JsonKey(name: 'tags') @Default(<String>[]) List<String>? tags,
   }) = _ImageMeta;
 
   // Entry point for the code generator to create _$ImageMetaFromJson.
@@ -48,7 +48,7 @@ class CivitaiImageModel with _$CivitaiImageModel {
   const factory CivitaiImageModel({
     required int id,
     required String url,
-    required String hash,
+    required String? hash,
 
     // Use @Default to provide default values for potentially missing fields, enhancing robustness.
     // 使用 @Default 为可能缺失的字段提供默认值，增强鲁棒性。

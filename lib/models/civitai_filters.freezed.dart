@@ -206,7 +206,7 @@ class __$$CivitaiFilterStateImplCopyWithImpl<$Res>
 class _$CivitaiFilterStateImpl extends _CivitaiFilterState
     with DiagnosticableTreeMixin {
   const _$CivitaiFilterStateImpl({
-    this.limit = 50,
+    this.limit = 200,
     this.postId,
     this.modelId,
     this.modelVersionId,

@@ -1,16 +1,19 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:featch_flow/models/unified_post_model.dart';
+import 'package:featch_flow/providers/floating_preview_provider.dart';
+import 'package:featch_flow/providers/settings_provider.dart';
 import 'package:featch_flow/providers/video_controller_provider.dart';
 import 'package:featch_flow/widgets/download_button.dart';
 import 'package:featch_flow/widgets/media_preview_dialog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-import 'package:flutter/services.dart';
-import 'package:featch_flow/services/download_service.dart';
 import 'package:featch_flow/providers/cache_manager_provider.dart';
-
 import 'package:visibility_detector/visibility_detector.dart';
 
 class UnifiedMediaCard extends ConsumerStatefulWidget {
@@ -21,118 +24,95 @@ class UnifiedMediaCard extends ConsumerStatefulWidget {
   ConsumerState<UnifiedMediaCard> createState() => _UnifiedMediaCardState();
 }
 
-// 【改动 2】将 State -> ConsumerState<UnifiedMediaCard>
 class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
-  bool _isHovering = false;
-  // 【新】增加 state 变量来管理可见性和视频控制器
+  final _isHovering = ValueNotifier<bool>(false);
   bool _isVisible = false;
-  VideoController? _videoController;
+  late String _currentPostId;
+  Timer? _disposeTimer;
 
-  String get _infoText {
+  String get _hoverInfoText {
     if (widget.post.source == 'civitai') {
-      return widget.post.originalData['meta']?['prompt'] ??
-          widget.post.tags.take(5).join(', ');
-    } else {
-      return widget.post.tags.take(5).join(', ');
+      return widget.post.originalData!['meta']?['prompt'] ??
+          widget.post.tags!.take(5).join(', ');
+    }
+    return widget.post.tags!.take(5).join(', ');
+  }
+
+  String get _badgeText {
+    final type = widget.post.mediaType.toString().split('.').last.toUpperCase();
+    final resolution = '${widget.post.width}×${widget.post.height}';
+    return '$type • $resolution';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPostId = widget.post.id;
+    debugPrint('🎬 [UnifiedMediaCard] INIT: ${widget.post.id}');
+  }
+
+  @override
+  void didUpdateWidget(UnifiedMediaCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.post.id != _currentPostId) {
+      debugPrint(
+        '🔄 [UnifiedMediaCard] POST CHANGED: $_currentPostId -> ${widget.post.id}',
+      );
+      _currentPostId = widget.post.id;
+      _isVisible = false;
+      _disposeTimer?.cancel();
+      _isHovering.value = false;
     }
   }
 
   @override
+  void dispose() {
+    debugPrint('🗑️ [UnifiedMediaCard] DISPOSE: $_currentPostId');
+    _disposeTimer?.cancel();
+    _isHovering.dispose();
+    super.dispose();
+  }
+  // lib/widgets/unified_media_card.dart
+
+  @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.all(6.0),
-      elevation: 4.0,
-      color: Theme.of(context).canvasColor,
-      child: Column(
-        children: [
-          MouseRegion(
-            onEnter: (_) {
-              setState(() => _isHovering = true);
-              debugPrint(
-                '[UnifiedMediaCard] Hovering on post: ${widget.post.id}',
-              );
-            },
-            onExit: (_) {
-              setState(() => _isHovering = false);
-              debugPrint(
-                '[UnifiedMediaCard] Not hovering on post: ${widget.post.id}',
-              );
-            },
-            child: InkWell(
-              onTap: () {
-                debugPrint(
-                  '[UnifiedMediaCard] Tapped on post: ${widget.post.id}',
-                );
-                _showPreview(context);
-              },
-              child: VisibilityDetector(
-                key: Key(widget.post.id),
-                onVisibilityChanged: (visibilityInfo) {
-                  final isVisible = visibilityInfo.visibleFraction > 0.5;
-                  if (_isVisible != isVisible) {
-                    if (!mounted) {
-                      return; // 如果 Widget 已经被销毁，则直接返回，不做任何操作
-                    }
-                    setState(() {
-                      _isVisible = isVisible;
-                    });
-                    debugPrint(
-                      '[UnifiedMediaCard] Post ${widget.post.id} visibility changed: $isVisible',
-                    );
-                    if (isVisible) {
-                      _videoController?.player.play();
-                      debugPrint(
-                        '[UnifiedMediaCard] Playing video for post: ${widget.post.id}',
-                      );
-                    } else {
-                      _videoController?.player.pause();
-                      debugPrint(
-                        '[UnifiedMediaCard] Pausing video for post: ${widget.post.id}',
-                      );
-                    }
-                  }
-                },
-                child: Stack(
-                  children: [
-                    Hero(
-                      tag: widget.post.id,
-                      child: _buildMediaWithAspectRatio(),
-                    ),
-                    Positioned.fill(child: _buildAnimatedGradientMask()),
-                    _buildAnimatedInfoText(),
-                  ],
-                ),
+    // ✅ 使用配置：卡片高度
+    final cardHeight = ref.watch(cardHeightProvider);
+
+    return SizedBox(
+      height: cardHeight, // ✅ 动态高度
+      child: Container(
+        margin: const EdgeInsets.all(2.0),
+        decoration: BoxDecoration(
+          color: Theme.of(context).canvasColor,
+          border: Border.all(
+            color: Colors.grey.withValues(alpha: 0.1),
+            width: 0.5,
+          ),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              // ✅ 媒体区域自适应
+              child: _MediaArea(
+                post: widget.post,
+                isHovering: _isHovering,
+                onTap: () => _showPreview(context),
+                onVisibilityChanged: _handleVisibilityChange,
+                badgeText: _badgeText,
+                hoverInfoText: _hoverInfoText,
+                child: Hero(tag: widget.post.id, child: _buildMediaContent()),
               ),
             ),
-          ),
-          _CardFooter(post: widget.post),
-        ],
+            const SizedBox(height: 44.0), // ✅ Footer 固定高度 44px
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildMediaWithAspectRatio() {
-    final post = widget.post;
-    final aspectRatio = post.width > 0 && post.height > 0
-        ? post.width / post.height
-        : 1.0;
-    const maxAspectRatio = 3.0;
-    final isTooLong = post.height > post.width * maxAspectRatio;
-
-    return AspectRatio(
-      aspectRatio: isTooLong
-          ? (post.width / (post.width * maxAspectRatio))
-          : aspectRatio,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints.expand(),
-        child: ClipRect(child: _buildMediaContent(isCropped: isTooLong)),
-      ),
-    );
-  }
-
-  Widget _buildMediaContent({bool isCropped = false}) {
+  // ✅ 简化：移除高度计算逻辑
+  Widget _buildMediaContent() {
     if (widget.post.mediaType == MediaType.video) {
       final videoProvider = videoControllerProvider(
         VideoPlayerConfig(
@@ -141,157 +121,153 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
           loop: true,
         ),
       );
-
       final asyncController = ref.watch(videoProvider);
 
       return asyncController.when(
         data: (controller) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _videoController = controller;
-              if (_isVisible) {
-                _videoController?.player.setVolume(0.0); // 预览视频静音
-                _videoController?.player.play();
-              }
-            }
-          });
+          if (_isVisible)
+            controller.player.play();
+          else
+            controller.player.pause();
           return Video(controller: controller);
         },
         loading: () => _ImageRenderer(
           imageUrl: widget.post.previewImageUrl,
-          alignment: isCropped ? Alignment.topCenter : Alignment.center,
+          fit: BoxFit.contain, // ✅ 保持原比例
+          alignment: Alignment.center, // ✅ 明确居中
         ),
-        error: (error, stack) {
-          debugPrint(
-            '[UnifiedMediaCard] Error loading video for post ${widget.post.id}: $error',
-          );
-          return const Center(child: Icon(Icons.error));
-        },
+        error: (error, stack) =>
+            const Center(child: Icon(Icons.error, size: 20)),
       );
     }
 
-    // 对于图片或GIF，行为保持不变
     return _ImageRenderer(
       imageUrl: widget.post.previewImageUrl,
-      alignment: isCropped ? Alignment.topCenter : Alignment.center,
+      fit: BoxFit.contain, // ✅ 保持原比例
+      alignment: Alignment.center, // ✅ 明确居中
     );
   }
 
-  Widget _buildAnimatedGradientMask() {
-    return AnimatedOpacity(
-      duration: const Duration(milliseconds: 250),
-      opacity: _isHovering ? 1.0 : 0.0,
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.transparent,
-              Colors.transparent,
-              Color.fromARGB(139, 0, 0, 0),
-            ],
-            stops: [0.0, 0.8, 1.0],
-          ),
-        ),
-      ),
+  void _handleVisibilityChange(VisibilityInfo info) {
+    final visibleFraction = info.visibleFraction;
+    debugPrint(
+      '👁️ [UnifiedMediaCard] Visibility: ${widget.post.id} = $visibleFraction',
     );
-  }
 
-  Widget _buildAnimatedInfoText() {
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      bottom: _isHovering ? 16.0 : -60.0,
-      left: 16.0,
-      right: 16.0,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: _isHovering ? 1.0 : 0.0,
-        child: Text(
-          _infoText,
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            shadows: [Shadow(blurRadius: 2.0, color: Colors.black)],
-          ),
-        ),
-      ),
-    );
+    if (visibleFraction < 0.1) {
+      _disposeTimer?.cancel();
+      _disposeTimer = Timer(const Duration(seconds: 2), () {
+        if (!mounted) return;
+        if (_isVisible) {
+          setState(() => _isVisible = false);
+          debugPrint('🔄 [${widget.post.id}] Set _isVisible = false');
+        }
+      });
+    } else {
+      _disposeTimer?.cancel();
+      if (!_isVisible && mounted) {
+        setState(() => _isVisible = true);
+        debugPrint('🔄 [${widget.post.id}] Set _isVisible = true');
+      }
+    }
   }
 
   void _showPreview(BuildContext context) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false,
-        barrierColor: Colors.black.withOpacity(0.8),
-        pageBuilder: (context, _, __) {
-          return MediaPreviewDialog(post: widget.post);
-        },
-        transitionDuration: const Duration(milliseconds: 300),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-      ),
-    );
+    // ✅ 改为打开悬浮预览
+    openFloatingPreview(ref, widget.post);
   }
 }
 
-class _MediaRenderer extends ConsumerWidget {
+class _MediaArea extends StatelessWidget {
   final UnifiedPostModel post;
-  final bool isHovering;
+  final ValueNotifier<bool> isHovering;
+  final VoidCallback onTap;
+  final Function(VisibilityInfo) onVisibilityChanged;
+  final String badgeText;
+  final String hoverInfoText;
+  final Widget child;
 
-  const _MediaRenderer({required this.post, required this.isHovering});
+  const _MediaArea({
+    required this.post,
+    required this.isHovering,
+    required this.onTap,
+    required this.onVisibilityChanged,
+    required this.badgeText,
+    required this.hoverInfoText,
+    required this.child,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final aspectRatio = post.width > 0 && post.height > 0
-        ? post.width / post.height
-        : 1.0;
-
-    const maxAspectRatio = 3.0;
-    final isTooLong = post.height > post.width * maxAspectRatio;
-
-    return AspectRatio(
-      aspectRatio: isTooLong
-          ? (post.width / (post.width * maxAspectRatio))
-          : aspectRatio,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints.expand(),
-        child: ClipRect(
-          child: _buildMediaContent(isCropped: isTooLong, ref: ref),
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => isHovering.value = true,
+      onExit: (_) => isHovering.value = false,
+      child: InkWell(
+        onTap: onTap,
+        highlightColor: Colors.transparent,
+        splashColor: Colors.transparent,
+        child: VisibilityDetector(
+          key: Key(post.id),
+          onVisibilityChanged: onVisibilityChanged,
+          child: Stack(
+            children: [
+              child,
+              ValueListenableBuilder<bool>(
+                valueListenable: isHovering,
+                builder: (context, hovering, __) {
+                  return AnimatedOpacity(
+                    duration: const Duration(milliseconds: 100),
+                    opacity: hovering ? 0.15 : 0.0,
+                    child: Container(color: Colors.black),
+                  );
+                },
+              ),
+              Positioned(top: 4, right: 4, child: _buildBadge(badgeText)),
+              _buildHoverText(hoverInfoText, isHovering),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMediaContent({bool isCropped = false, required WidgetRef ref}) {
-    if (post.mediaType == MediaType.video && isHovering) {
-      final videoController = ref.watch(
-        videoControllerProvider(
-          VideoPlayerConfig(
-            videoUrl: post.fullImageUrl,
-            autoplay: true,
-            loop: true,
+  Widget _buildBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHoverText(String text, ValueNotifier<bool> hovering) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: hovering,
+      builder: (context, isHovering, __) {
+        return AnimatedPositioned(
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          bottom: isHovering ? 8.0 : -40.0,
+          left: 8.0,
+          right: 8.0,
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 100),
+            opacity: isHovering ? 1.0 : 0.0,
+            child: Text(
+              text,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 10),
+            ),
           ),
-        ),
-      );
-
-      return videoController.when(
-        data: (controller) => Video(controller: controller),
-        loading: () => _ImageRenderer(
-          imageUrl: post.previewImageUrl,
-          alignment: isCropped ? Alignment.topCenter : Alignment.center,
-        ),
-        error: (error, stack) => const Center(child: Icon(Icons.error)),
-      );
-    }
-
-    return _ImageRenderer(
-      imageUrl: post.previewImageUrl,
-      alignment: isCropped ? Alignment.topCenter : Alignment.center,
+        );
+      },
     );
   }
 }
@@ -299,100 +275,194 @@ class _MediaRenderer extends ConsumerWidget {
 class _ImageRenderer extends ConsumerWidget {
   final String imageUrl;
   final Alignment alignment;
-
+  final BoxFit fit; // ✅ 新增
   const _ImageRenderer({
     required this.imageUrl,
     this.alignment = Alignment.center,
+    this.fit = BoxFit.contain,
   });
-
+  
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cacheManager = ref.watch(customCacheManagerProvider);
-    return CachedNetworkImage(
-      cacheManager: cacheManager,
-      imageUrl: imageUrl,
-      fit: BoxFit.cover,
-      alignment: alignment,
-      placeholder: (context, url) => Container(color: Colors.grey.shade300),
-      errorWidget: (context, url, error) {
-        debugPrint(
-          '[UnifiedMediaCard] Error loading image: $url, error: $error',
-        );
-        return Container(
-          color: Colors.grey.shade300,
-          child: const Icon(Icons.broken_image, color: Colors.grey),
-        );
-      },
+    return Center(
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: CachedNetworkImage(
+          cacheManager: cacheManager,
+          imageUrl: imageUrl,
+          fit: BoxFit.contain,
+          alignment: alignment,
+          fadeInDuration: const Duration(milliseconds: 50),
+          fadeOutDuration: const Duration(milliseconds: 20),
+          placeholder: (context, url) => const SizedBox.shrink(),
+          errorWidget: (context, url, error) => Container(
+            color: Colors.grey.shade300,
+            child: const Icon(Icons.broken_image, size: 16),
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _CardFooter extends ConsumerWidget {
+// ✅ FIXED: 修正所有问题
+class TagDetailsDialog extends StatelessWidget {
   final UnifiedPostModel post;
-  const _CardFooter({required this.post});
-
-  Future<void> _copyInfo(BuildContext context) async {
-    try {
-      String textToCopy = _getTextToCopy();
-      if (textToCopy.isNotEmpty) {
-        await Clipboard.setData(ClipboardData(text: textToCopy));
-        if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Copied to clipboard!')));
-        }
-        debugPrint('[UnifiedMediaCard] Copied info for post: ${post.id}');
-      }
-    } catch (e) {
-      debugPrint('[UnifiedMediaCard] Failed to copy to clipboard: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Failed to copy.')));
-      }
-    }
-  }
+  const TagDetailsDialog({super.key, required this.post});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Wrap(
-              spacing: 4.0,
-              runSpacing: 2.0,
-              children: post.tags.take(3).map((tag) {
-                return Chip(
-                  label: Text(tag, style: const TextStyle(fontSize: 10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                );
-              }).toList(),
+  Widget build(BuildContext context) {
+    final dynamic meta = post.originalData!['meta'];
+    String? prompt;
+    if (post.source == 'civitai' &&
+        meta is Map<String, dynamic> &&
+        meta['prompt'] is String &&
+        (meta['prompt'] as String).trim().isNotEmpty) {
+      prompt = meta['prompt'] as String;
+    }
+
+    final String content = (prompt != null && prompt.isNotEmpty)
+        ? prompt
+        : post.tags!.join(', ');
+
+    final items = content
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    return Dialog(
+      backgroundColor: Theme.of(context).cardColor,
+      child: Container(
+        width: min(500, MediaQuery.of(context).size.width * 0.9),
+        height: min(600, MediaQuery.of(context).size.height * 0.7),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ✅ FIXED: 内联 header 而不是调用未定义的方法
+            Row(
+              children: [
+                Icon(Icons.tag, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'Tags & Prompt',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
             ),
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.copy_all_outlined, size: 20),
-                onPressed: () => _copyInfo(context),
-                tooltip: 'Copy Info',
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Wrap(
+                spacing: 12,
+                children: [
+                  _buildInfoChip(
+                    context,
+                    '类型',
+                    post.mediaType.toString().split('.').last,
+                  ),
+                  _buildInfoChip(
+                    context,
+                    '分辨率',
+                    '${post.width}×${post.height}',
+                  ),
+                  _buildInfoChip(context, '数量', '${items.length} 个'),
+                ],
               ),
-              DownloadButton(post: post),
-            ],
-          ),
-        ],
+            ),
+            const Divider(),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: items
+                      .map((item) => _buildTagChip(context, item))
+                      .toList(), // ✅ FIXED
+                ),
+              ),
+            ),
+            _buildDialogActions(context, items),
+          ],
+        ),
       ),
     );
   }
 
-  String _getTextToCopy() {
-    if (post.source == 'civitai') {
-      return post.originalData['meta']?['prompt'] ?? post.tags.join(', ');
-    } else {
-      return post.tags.join(', ');
-    }
+  // ✅ FIXED: 定义为实例方法
+  Widget _buildInfoChip(BuildContext context, String label, String value) {
+    return Chip(
+      label: RichText(
+        text: TextSpan(
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyMedium?.color,
+          ),
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            TextSpan(text: value),
+          ],
+        ),
+      ),
+      backgroundColor: Theme.of(context).cardColor,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
+  // ✅ FIXED: 定义为实例方法
+  Widget _buildTagChip(BuildContext context, String item) {
+    return ActionChip(
+      label: Text(item, style: const TextStyle(fontSize: 13)),
+      backgroundColor: Colors.blue.withValues(alpha: 0.1),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      onPressed: () {
+        Clipboard.setData(ClipboardData(text: item));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('已复制: $item'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDialogActions(BuildContext context, List<String> items) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: items.join(', ')));
+              Navigator.pop(context);
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
+            },
+            child: const Text('复制全部'),
+          ),
+          const SizedBox(width: 6),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            ),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
   }
 }

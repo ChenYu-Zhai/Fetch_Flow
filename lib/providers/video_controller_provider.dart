@@ -13,16 +13,12 @@ class VideoPlayerConfig {
   final bool loop;
   final bool autoplay;
 
-  VideoPlayerConfig({
+  const VideoPlayerConfig({
     required this.videoUrl,
-    this.loop = true, // Loop by default.
-    this.autoplay = true, // Do not autoplay by default.
+    this.loop = true,
+    this.autoplay = false, // ✅ 关键修复：默认不自动播放，由UI控制
   });
 
-  // Important: When adding new properties, be sure to update the == and hashCode implementations.
-  // This allows Riverpod to correctly determine if the parameters have changed between calls.
-  // 重要：当增加新属性后，一定要更新 == 和 hashCode 的实现。
-  // 这样 Riverpod 才能正确地判断两次调用的参数是否发生了变化。
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -33,75 +29,99 @@ class VideoPlayerConfig {
           autoplay == other.autoplay;
 
   @override
-  int get hashCode => videoUrl.hashCode ^ loop.hashCode ^ autoplay.hashCode;
+  int get hashCode => Object.hash(videoUrl, loop, autoplay);
 }
 
-final videoControllerProvider = FutureProvider.autoDispose
-    .family<VideoController, VideoPlayerConfig>((ref, config) async {
-      debugPrint('[VideoControllerProvider] Creating player for: ${config.videoUrl}');
-      final player = Player();
-      final controller = VideoController(player);
+/// 修改为普通 Provider，移除 autoDispose
+/// 由 MediaPreloadService 手动管理生命周期
+final videoControllerProvider = FutureProvider.family<VideoController, VideoPlayerConfig>(
+  (ref, config) async {
+    debugPrint('🎬 [VideoControllerProvider] Creating player: ${config.videoUrl}');
+    
+    final stopwatch = Stopwatch()..start();
+    final player = Player();
+    final controller = VideoController(player);
 
-      // The play command will be issued by the UI.
-      // 播放的指令将由 UI 发出。
-      player.open(
+    try {
+      // 配置播放器参数
+      player.setVolume(0); // 预加载时静音
+      player.setRate(1.0);
+
+      // 打开媒体资源（不自动播放）
+      await player.open(
         Media(config.videoUrl, httpHeaders: kIsWeb ? null : nativeHttpHeaders),
-        play: false,
+        play: config.autoplay, // ✅ 使用配置参数
       );
-      debugPrint('[VideoControllerProvider] Opened media: ${config.videoUrl}');
-
+      
       if (config.loop) {
         player.setPlaylistMode(PlaylistMode.single);
       } else {
         player.setPlaylistMode(PlaylistMode.none);
       }
 
+      stopwatch.stop();
+      debugPrint('✅ [VideoControllerProvider] Initialized in ${stopwatch.elapsedMilliseconds}ms: ${config.videoUrl}');
+
+      // ✅ 关键修复：手动控制生命周期，不依赖 autoDispose
       ref.onDispose(() {
-        debugPrint('[VideoControllerProvider] Disposing player for: ${config.videoUrl}');
+        debugPrint('🗑️ [VideoControllerProvider] Scheduling dispose: ${config.videoUrl}');
         _safeDisposePlayer(player, config.videoUrl);
       });
 
       return controller;
-    });
+    } catch (e) {
+      debugPrint('❌ [VideoControllerProvider] Failed to create: ${config.videoUrl}, error: $e');
+      await player.dispose();
+      rethrow;
+    }
+  },
+);
 
-/// A safe player disposal function that considers multithreading and lifecycle.
-/// 一个安全的、考虑了多线程和生命周期的 Player 销毁函数。
-void _safeDisposePlayer(Player player, String videoUrl) {
-  final currentIsolateName = Isolate.current.debugName;
+/// ✅ 增强的 dispose 逻辑，添加超时保护
+void _safeDisposePlayer(Player player, String videoUrl) async {
+  final currentIsolate = Isolate.current.debugName;
 
-  if (!kIsWeb &&
-      currentIsolateName != 'main' &&
-      currentIsolateName?.isNotEmpty == true) {
-    // If we find ourselves in a background isolate (name is not 'main'),
-    // we do not directly call any code related to the Flutter engine,
-    // because the main thread may no longer exist. We just print a log and give up.
-    // 如果我们发现自己处在一个后台 Isolate 中 (名字不是 'main')，
-    // 我们不直接调用任何与 Flutter 引擎相关的代码，
-    // 因为此时主线程可能已经不存在了。我们只打印一条日志，然后放弃操作。
-    debugPrint(
-      '[VideoControllerProvider] Cannot dispose player from background isolate: $currentIsolateName for url: $videoUrl. Letting OS clean up.',
-    );
+  // Web 平台直接 dispose
+  if (kIsWeb) {
+    try {
+      await player.dispose();
+      debugPrint('🧹 [VideoControllerProvider] Disposed (web): $videoUrl');
+    } catch (e) {
+      debugPrint('⚠️ [VideoControllerProvider] Dispose failed (web): $videoUrl, $e');
+    }
     return;
   }
 
-  // If we are sure we are on the main thread, or on the web platform,
-  // continue to use the stable and safe SchedulerBinding scheme.
-  // 如果我们确定在主线程上，或者在 Web 平台上，
-  // 则继续使用之前稳定、安全的 SchedulerBinding 方案。
+  // 非主 Isolate 跳过（理论上不应发生，因为我们在主线程创建）
+  if (currentIsolate != 'main') {
+    debugPrint('⚠️ [VideoControllerProvider] Non-main isolate dispose skipped: $videoUrl');
+    return;
+  }
+
+  // 主线程安全 dispose（带超时保护）
   try {
+    if (SchedulerBinding.instance.lifecycleState == null) {
+      debugPrint('⚠️ [VideoControllerProvider] App closing, skip dispose: $videoUrl');
+      return;
+    }
+
+    // ✅ 添加超时，防止 dispose 挂起
+    await SchedulerBinding.instance.endOfFrame.timeout(
+      const Duration(seconds: 2),
+      onTimeout: () => debugPrint('⏱️ [VideoControllerProvider] Dispose timeout: $videoUrl'),
+    );
+
     if (SchedulerBinding.instance.lifecycleState != null) {
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        player.dispose();
-        debugPrint('[VideoControllerProvider] Safely disposed video player on main thread: $videoUrl');
+      SchedulerBinding.instance.addPostFrameCallback((_) async {
+        try {
+          await player.dispose().timeout(const Duration(seconds: 3));
+          debugPrint('✅ [VideoControllerProvider] Safely disposed: $videoUrl');
+        } catch (e) {
+          debugPrint('❌ [VideoControllerProvider] Dispose error: $videoUrl, $e');
+        }
       });
-    } else {
-      // If ServicesBinding has been detached, it means the application is closing and nothing more needs to be done.
-      // 如果 ServicesBinding 已经解绑，说明应用正在关闭，无需再做任何事。
-      debugPrint('[VideoControllerProvider] ServicesBinding detached. Skipping disposal for: $videoUrl');
     }
   } catch (e) {
-    // Catch any exceptions that may occur during the check.
-    // 捕获任何在检查过程中可能发生的异常。
-    debugPrint('[VideoControllerProvider] Error during safe disposal scheduling for $videoUrl: $e');
+    debugPrint('❌ [VideoControllerProvider] Scheduling error: $videoUrl, $e');
   }
 }

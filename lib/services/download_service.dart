@@ -119,17 +119,17 @@ class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
   }
 
   String _getTextToCopy(UnifiedPostModel post) {
-    if (post.source == 'civitai' && post.originalData.isNotEmpty) {
+    if (post.source == 'civitai' && post.originalData!.isNotEmpty) {
       try {
-        final civitaiModel = CivitaiImageModel.fromJson(post.originalData);
+        final civitaiModel = CivitaiImageModel.fromJson(post.originalData!);
         print(civitaiModel.meta?.prompt);
-        return civitaiModel.meta?.prompt ?? post.tags.join(', ');
+        return civitaiModel.meta?.prompt ?? post.tags!.join(', ');
       } catch (e) {
         print('Failed to re-parse CivitaiImageModel from originalData: $e');
-        return post.tags.join(', ');
+        return post.tags!.join(', ');
       }
     } else {
-      return post.tags.join(', ');
+      return post.tags!.join(', ');
     }
   }
 }

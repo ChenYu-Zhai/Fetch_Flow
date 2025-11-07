@@ -1,26 +1,116 @@
-import 'package:flutter/foundation.dart';
+// lib/providers/settings_provider.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'auth_provider.dart'; // We need sharedPreferencesProvider.
 
-// Create a Notifier to handle the saving logic.
-// 创建一个 Notifier 来处理保存逻辑。
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'shared_preferences_provider.dart';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'shared_preferences_provider.dart';
+
+/* -------------------- 工具函数 -------------------- */
+int _getInt(Ref ref, String key, int fallback) => ref
+    .watch(sharedPreferencesProvider)
+    .when(
+      data: (p) => p.getInt(key) ?? fallback,
+      loading: () => fallback,
+      error: (_, __) => fallback,
+    );
+
+double _getDouble(Ref ref, String key, double fallback) => ref
+    .watch(sharedPreferencesProvider)
+    .when(
+      data: (p) => p.getDouble(key) ?? fallback,
+      loading: () => fallback,
+      error: (_, __) => fallback,
+    );
+
+/* -------------------- 各配置项 -------------------- */
+
+/// 网格列数（持久化）
+final crossAxisCountNotifierProvider =
+    StateNotifierProvider<CrossAxisCountNotifier, int>((ref) {
+      final initial = _getInt(ref, 'crossAxisCount', 3);
+      return CrossAxisCountNotifier(ref, initial); // ✅ 传入 ref
+    });
+
 class CrossAxisCountNotifier extends StateNotifier<int> {
-  final SharedPreferences _prefs;
-  CrossAxisCountNotifier(this._prefs)
-    : super(_prefs.getInt('crossAxisCount') ?? 2);
+  final Ref _ref; // ✅ 保存 ref
+  CrossAxisCountNotifier(this._ref, super.state);
 
-  Future<void> setCount(int count) async {
-    debugPrint('[CrossAxisCountNotifier] Setting cross axis count to: $count');
-    await _prefs.setInt('crossAxisCount', count);
-    state = count;
+  Future<void> setCount(int value) async {
+    final prefs = await _ref.read(sharedPreferencesProvider.future);
+    await prefs.setInt('crossAxisCount', value);
+    state = value;
   }
 }
 
-final crossAxisCountNotifierProvider =
-    StateNotifierProvider<CrossAxisCountNotifier, int>((ref) {
+/// 卡片高度（持久化）
+final cardHeightProvider = StateNotifierProvider<CardHeightNotifier, double>((
+  ref,
+) {
+  final initial = _getDouble(ref, 'cardHeight', 280.0);
+  return CardHeightNotifier(ref, initial); // ✅ 传入 ref
+});
+
+class CardHeightNotifier extends StateNotifier<double> {
+  final Ref _ref;
+  CardHeightNotifier(this._ref, super.state);
+
+  Future<void> setHeight(double value) async {
+    final prefs = await _ref.read(sharedPreferencesProvider.future);
+    await prefs.setDouble('cardHeight', value);
+    state = value;
+  }
+}
+
+/// 预加载延迟（持久化）
+final preloadDelayProvider = StateNotifierProvider<PreloadDelayNotifier, int>((
+  ref,
+) {
+  final initial = _getInt(ref, 'preloadDelay', 300);
+  return PreloadDelayNotifier(ref, initial); // ✅ 传入 ref
+});
+
+class PreloadDelayNotifier extends StateNotifier<int> {
+  final Ref _ref;
+  PreloadDelayNotifier(this._ref, super.state);
+
+  Future<void> setDelay(int value) async {
+    final prefs = await _ref.read(sharedPreferencesProvider.future);
+    await prefs.setInt('preloadDelay', value);
+    state = value;
+  }
+}
+
+/// 每页数量（持久化）
+final prefetchThresholdNotifierProvider =
+    StateNotifierProvider<PrefetchThresholdNotifier, int>((ref) {
+      final initial = _getInt(ref, 'prefetchThreshold', 20);
+      return PrefetchThresholdNotifier(ref, initial); // ✅ 传入 ref
+    });
+
+class PrefetchThresholdNotifier extends StateNotifier<int> {
+  final Ref _ref;
+  PrefetchThresholdNotifier(this._ref, super.state);
+
+  Future<void> setThreshold(int value) async {
+    final prefs = await _ref.read(sharedPreferencesProvider.future);
+    await prefs.setInt('prefetchThreshold', value);
+    state = value;
+  }
+}
+
+/// 下载路径（保持您原有实现）
+final downloadPathProvider =
+    StateNotifierProvider<DownloadPathNotifier, String>((ref) {
       final prefs = ref.watch(sharedPreferencesProvider).requireValue;
-      return CrossAxisCountNotifier(prefs);
+      return DownloadPathNotifier(prefs);
     });
 
 class DownloadPathNotifier extends StateNotifier<String> {
@@ -29,14 +119,10 @@ class DownloadPathNotifier extends StateNotifier<String> {
     : super(_prefs.getString('downloadPath') ?? '');
 
   Future<void> setPath(String path) async {
-    debugPrint('[DownloadPathNotifier] Setting download path to: $path');
     await _prefs.setString('downloadPath', path);
     state = path;
   }
 }
 
-final downloadPathProvider =
-    StateNotifierProvider<DownloadPathNotifier, String>((ref) {
-      final prefs = ref.watch(sharedPreferencesProvider).requireValue;
-      return DownloadPathNotifier(prefs);
-    });
+/// Slider 实时显示值（纯 UI 状态，不持久化）
+final sliderValueProvider = StateProvider<int>((ref) => 20);

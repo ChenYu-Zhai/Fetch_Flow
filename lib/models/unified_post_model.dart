@@ -30,14 +30,14 @@ class UnifiedPostModel with _$UnifiedPostModel {
 
     // --- Additional information ---
     // --- 附加信息 ---
-    @Default([]) List<String> tags,
+    @Default([]) List<String>? tags,
     String? author,
     int? score,
 
     // --- Metadata ---
     // --- 元数据 ---
     String? detailsUrl,
-    @Default({}) Map<String, dynamic> originalData,
+    @Default({}) Map<String, dynamic>? originalData,
   }) = _UnifiedPostModel;
 
   // Add a fromJson factory constructor to convert a Map to an object.

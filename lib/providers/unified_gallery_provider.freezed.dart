@@ -22,6 +22,8 @@ mixin _$GalleryState {
   bool get hasMore => throw _privateConstructorUsedError;
   Map<String, dynamic> get filters => throw _privateConstructorUsedError;
   bool get isLoadingNextPage => throw _privateConstructorUsedError;
+  int get totalFetched => throw _privateConstructorUsedError; // 跟踪总数
+  int get lastFetchTime => throw _privateConstructorUsedError;
 
   /// Create a copy of GalleryState
   /// with the given fields replaced by the non-null parameter values.
@@ -43,6 +45,8 @@ abstract class $GalleryStateCopyWith<$Res> {
     bool hasMore,
     Map<String, dynamic> filters,
     bool isLoadingNextPage,
+    int totalFetched,
+    int lastFetchTime,
   });
 }
 
@@ -66,6 +70,8 @@ class _$GalleryStateCopyWithImpl<$Res, $Val extends GalleryState>
     Object? hasMore = null,
     Object? filters = null,
     Object? isLoadingNextPage = null,
+    Object? totalFetched = null,
+    Object? lastFetchTime = null,
   }) {
     return _then(
       _value.copyWith(
@@ -86,6 +92,14 @@ class _$GalleryStateCopyWithImpl<$Res, $Val extends GalleryState>
                 ? _value.isLoadingNextPage
                 : isLoadingNextPage // ignore: cast_nullable_to_non_nullable
                       as bool,
+            totalFetched: null == totalFetched
+                ? _value.totalFetched
+                : totalFetched // ignore: cast_nullable_to_non_nullable
+                      as int,
+            lastFetchTime: null == lastFetchTime
+                ? _value.lastFetchTime
+                : lastFetchTime // ignore: cast_nullable_to_non_nullable
+                      as int,
           )
           as $Val,
     );
@@ -107,6 +121,8 @@ abstract class _$$GalleryStateImplCopyWith<$Res>
     bool hasMore,
     Map<String, dynamic> filters,
     bool isLoadingNextPage,
+    int totalFetched,
+    int lastFetchTime,
   });
 }
 
@@ -129,6 +145,8 @@ class __$$GalleryStateImplCopyWithImpl<$Res>
     Object? hasMore = null,
     Object? filters = null,
     Object? isLoadingNextPage = null,
+    Object? totalFetched = null,
+    Object? lastFetchTime = null,
   }) {
     return _then(
       _$GalleryStateImpl(
@@ -149,6 +167,14 @@ class __$$GalleryStateImplCopyWithImpl<$Res>
             ? _value.isLoadingNextPage
             : isLoadingNextPage // ignore: cast_nullable_to_non_nullable
                   as bool,
+        totalFetched: null == totalFetched
+            ? _value.totalFetched
+            : totalFetched // ignore: cast_nullable_to_non_nullable
+                  as int,
+        lastFetchTime: null == lastFetchTime
+            ? _value.lastFetchTime
+            : lastFetchTime // ignore: cast_nullable_to_non_nullable
+                  as int,
       ),
     );
   }
@@ -156,15 +182,18 @@ class __$$GalleryStateImplCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$GalleryStateImpl with DiagnosticableTreeMixin implements _GalleryState {
+class _$GalleryStateImpl extends _GalleryState with DiagnosticableTreeMixin {
   const _$GalleryStateImpl({
     final List<UnifiedPostModel> posts = const [],
     this.nextToken,
     this.hasMore = true,
     final Map<String, dynamic> filters = const {},
     this.isLoadingNextPage = false,
+    this.totalFetched = 0,
+    this.lastFetchTime = 0,
   }) : _posts = posts,
-       _filters = filters;
+       _filters = filters,
+       super._();
 
   final List<UnifiedPostModel> _posts;
   @override
@@ -192,10 +221,17 @@ class _$GalleryStateImpl with DiagnosticableTreeMixin implements _GalleryState {
   @override
   @JsonKey()
   final bool isLoadingNextPage;
+  @override
+  @JsonKey()
+  final int totalFetched;
+  // 跟踪总数
+  @override
+  @JsonKey()
+  final int lastFetchTime;
 
   @override
   String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
-    return 'GalleryState(posts: $posts, nextToken: $nextToken, hasMore: $hasMore, filters: $filters, isLoadingNextPage: $isLoadingNextPage)';
+    return 'GalleryState(posts: $posts, nextToken: $nextToken, hasMore: $hasMore, filters: $filters, isLoadingNextPage: $isLoadingNextPage, totalFetched: $totalFetched, lastFetchTime: $lastFetchTime)';
   }
 
   @override
@@ -207,7 +243,9 @@ class _$GalleryStateImpl with DiagnosticableTreeMixin implements _GalleryState {
       ..add(DiagnosticsProperty('nextToken', nextToken))
       ..add(DiagnosticsProperty('hasMore', hasMore))
       ..add(DiagnosticsProperty('filters', filters))
-      ..add(DiagnosticsProperty('isLoadingNextPage', isLoadingNextPage));
+      ..add(DiagnosticsProperty('isLoadingNextPage', isLoadingNextPage))
+      ..add(DiagnosticsProperty('totalFetched', totalFetched))
+      ..add(DiagnosticsProperty('lastFetchTime', lastFetchTime));
   }
 
   @override
@@ -220,7 +258,11 @@ class _$GalleryStateImpl with DiagnosticableTreeMixin implements _GalleryState {
             (identical(other.hasMore, hasMore) || other.hasMore == hasMore) &&
             const DeepCollectionEquality().equals(other._filters, _filters) &&
             (identical(other.isLoadingNextPage, isLoadingNextPage) ||
-                other.isLoadingNextPage == isLoadingNextPage));
+                other.isLoadingNextPage == isLoadingNextPage) &&
+            (identical(other.totalFetched, totalFetched) ||
+                other.totalFetched == totalFetched) &&
+            (identical(other.lastFetchTime, lastFetchTime) ||
+                other.lastFetchTime == lastFetchTime));
   }
 
   @override
@@ -231,6 +273,8 @@ class _$GalleryStateImpl with DiagnosticableTreeMixin implements _GalleryState {
     hasMore,
     const DeepCollectionEquality().hash(_filters),
     isLoadingNextPage,
+    totalFetched,
+    lastFetchTime,
   );
 
   /// Create a copy of GalleryState
@@ -242,14 +286,17 @@ class _$GalleryStateImpl with DiagnosticableTreeMixin implements _GalleryState {
       __$$GalleryStateImplCopyWithImpl<_$GalleryStateImpl>(this, _$identity);
 }
 
-abstract class _GalleryState implements GalleryState {
+abstract class _GalleryState extends GalleryState {
   const factory _GalleryState({
     final List<UnifiedPostModel> posts,
     final Object? nextToken,
     final bool hasMore,
     final Map<String, dynamic> filters,
     final bool isLoadingNextPage,
+    final int totalFetched,
+    final int lastFetchTime,
   }) = _$GalleryStateImpl;
+  const _GalleryState._() : super._();
 
   @override
   List<UnifiedPostModel> get posts;
@@ -261,6 +308,10 @@ abstract class _GalleryState implements GalleryState {
   Map<String, dynamic> get filters;
   @override
   bool get isLoadingNextPage;
+  @override
+  int get totalFetched; // 跟踪总数
+  @override
+  int get lastFetchTime;
 
   /// Create a copy of GalleryState
   /// with the given fields replaced by the non-null parameter values.
