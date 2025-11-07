@@ -62,7 +62,7 @@ class CivitaiFilterState with _$CivitaiFilterState {
   const CivitaiFilterState._();
 
   const factory CivitaiFilterState({
-    @Default(50) int limit,
+    @Default(200) int limit,
     int? postId,
     int? modelId,
     int? modelVersionId,

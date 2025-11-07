@@ -30,7 +30,6 @@ Fetch_Flow is a high-performance media browser built with Flutter, designed for 
     *   Preview Prompts or Tags on mouse hover.
     *   Immersive image preview with scroll-to-zoom and drag-to-pan.
     *   Reliable download feature with progress indicators.
-*   **Highly Customizable**: Users can customize preferences like download path, grid column count, and video autoplay in settings.
 *   **Performance First**: Ensures an extremely smooth scrolling and loading experience through various optimizations like Isolate-based parsing, media preloading, and widget pre-rendering.
 
 ### 🚀 Quick Start
@@ -99,12 +98,11 @@ Fetch_Flow 是一款使用 Flutter 构建的高性能媒体浏览器，专为内
 *   **多源聚合**: 在一个应用内无缝切换和浏览来自不同网站的内容。
 *   **现代化 UI**: 瀑布流布局，支持图片、GIF 和视频的流畅播放，提供沉浸式的浏览体验。
 *   **强大的筛选与搜索**: 针对不同数据源提供定制化的筛选选项（如排序、时间范围）和强大的标签搜索功能。
-*   **跨平台支持**: 完美运行在 **Web**, **Windows**, **Android** 等多个平台，未来将支持更多。
+*   **跨平台支持**: 完美运行在 **Web**, **Windows**等多个平台，未来将支持更多。
 *   **高级交互**:
     *   鼠标悬浮即可预览 Prompt 或 Tags。
     *   支持滚轮缩放和拖动平移的沉浸式图片预览。
     *   带进度指示的、可靠的下载功能。
-*   **高度可定制**: 用户可以在设置中自定义下载路径、瀑布流列数、视频自动播放等偏好。
 *   **性能优先**: 通过 Isolate 多线程解析、图片预加载和 Widget 预渲染等多种优化手段，确保极致的滚动和加载性能。
 
 ### 🚀 快速开始

@@ -2,6 +2,7 @@
 import 'package:featch_flow/providers/auth_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'screens/main_screen.dart';
 
@@ -9,6 +10,7 @@ import 'package:media_kit/media_kit.dart';
 
 void main() {
   debugPrint('[main] App starting...');
+  debugRepaintRainbowEnabled=true;
   WidgetsFlutterBinding.ensureInitialized();
   // Initialize MediaKit for video playback capabilities.
   // 初始化 MediaKit 以支持视频播放功能。
