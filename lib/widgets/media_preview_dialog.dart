@@ -1,4 +1,5 @@
 // lib/widgets/media_preview_dialog.dart
+
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:featch_flow/models/unified_post_model.dart';
@@ -36,17 +37,16 @@ class MediaPreviewDialog extends ConsumerWidget {
             Center(
               child: Hero(
                 tag: post.id,
-                flightShuttleBuilder:
-                    (
-                      flightContext,
-                      animation,
-                      flightDirection,
-                      fromHeroContext,
-                      toHeroContext,
-                    ) {
-                      final Hero toHero = toHeroContext.widget as Hero;
-                      return toHero.child;
-                    },
+                flightShuttleBuilder: (
+                  flightContext,
+                  animation,
+                  flightDirection,
+                  fromHeroContext,
+                  toHeroContext,
+                ) {
+                  final Hero toHero = toHeroContext.widget as Hero;
+                  return toHero.child;
+                },
                 // Important: Wrap another GestureDetector inside Hero.
                 // This prevents click events on the image itself from passing through to the underlying GestureDetector and closing the dialog.
                 // --- 重要：在 Hero 内再包裹一个 GestureDetector ---
@@ -178,13 +178,31 @@ class _MediaKitVideoPlayerState extends ConsumerState<MediaKitVideoPlayer> {
   // 定义一个 StreamSubscription，以便在 Widget 销毁时能够取消监听。
   StreamSubscription<bool>? _bufferingSubscription;
 
+  /// ✅ 关键修复：保存播放器实例以便在 dispose 中释放
+  Player? _player;
+
   @override
   void dispose() {
-    // When the Widget is disposed, be sure to unsubscribe to prevent memory leaks.
-    // 在 Widget 销毁时，务必取消订阅，防止内存泄漏。
+    // ✅ 核心修复：强制暂停并释放播放器
+    debugPrint('[MediaKitVideoPlayer] Disposing and releasing player...');
+    
+    try {
+      // 1. 先暂停播放
+      _player?.pause();
+      // 2. 等待一小段时间确保音频停止
+      Future.delayed(const Duration(milliseconds: 50), () {
+        // 3. 释放播放器资源
+        _player?.dispose();
+      });
+    } catch (e) {
+      debugPrint('[MediaKitVideoPlayer] Error during dispose: $e');
+    }
+
+    // 4. 取消订阅
     _bufferingSubscription?.cancel();
+    
     super.dispose();
-    debugPrint('[MediaKitVideoPlayer] Disposed.');
+    debugPrint('[MediaKitVideoPlayer] Fully disposed.');
   }
 
   @override
@@ -200,8 +218,10 @@ class _MediaKitVideoPlayerState extends ConsumerState<MediaKitVideoPlayer> {
     ref.listen<AsyncValue<VideoController>>(providerInstance, (previous, next) {
       if (next is AsyncData) {
         final controller = next.value;
-        final player = controller?.player;
-        if (player == null) return;
+        // ✅ 保存播放器实例
+        _player = controller?.player;
+        
+        if (controller == null || _player == null) return;
 
         debugPrint(
           "[MediaKitVideoPlayer] Controller ready, setting up listeners.",
@@ -209,7 +229,7 @@ class _MediaKitVideoPlayerState extends ConsumerState<MediaKitVideoPlayer> {
 
         // Listen for playback state changes.
         // 监听是否在播放。
-        player.stream.playing.listen((playing) {
+        _player!.stream.playing.listen((playing) {
           debugPrint(
             "[MediaKitVideoPlayer] Playback state changed: isPlaying = $playing",
           );
@@ -217,7 +237,7 @@ class _MediaKitVideoPlayerState extends ConsumerState<MediaKitVideoPlayer> {
 
         // Listen for playback completion.
         // 监听是否播放完毕。
-        player.stream.completed.listen((completed) {
+        _player!.stream.completed.listen((completed) {
           debugPrint(
             "[MediaKitVideoPlayer] Playback completed state: isCompleted = $completed",
           );
@@ -225,7 +245,7 @@ class _MediaKitVideoPlayerState extends ConsumerState<MediaKitVideoPlayer> {
 
         // Listen for errors.
         // 监听错误。
-        player.stream.error.listen((error) {
+        _player!.stream.error.listen((error) {
           debugPrint("[MediaKitVideoPlayer] Player error: $error");
         });
 
@@ -233,9 +253,7 @@ class _MediaKitVideoPlayerState extends ConsumerState<MediaKitVideoPlayer> {
         // 之前的缓冲监听逻辑保持不变。
         if (config.autoplay) {
           _bufferingSubscription?.cancel();
-          _bufferingSubscription = player.stream.buffering.listen((
-            isBuffering,
-          ) {
+          _bufferingSubscription = _player!.stream.buffering.listen((isBuffering) {
             debugPrint(
               "[MediaKitVideoPlayer] Buffering state changed: isBuffering = $isBuffering",
             );
@@ -243,12 +261,14 @@ class _MediaKitVideoPlayerState extends ConsumerState<MediaKitVideoPlayer> {
               debugPrint(
                 "[MediaKitVideoPlayer] Buffering finished, attempting to play...",
               );
-              player.setVolume(0.0);
-              player.play();
+              _player!.setVolume(0.0);
+              _player!.play();
               _bufferingSubscription?.cancel();
             }
           });
         }
+      } else if (next is AsyncError) {
+        debugPrint("[MediaKitVideoPlayer] Controller error: ${next.error}");
       }
     });
 
@@ -264,9 +284,7 @@ class _MediaKitVideoPlayerState extends ConsumerState<MediaKitVideoPlayer> {
         return const Center(child: CircularProgressIndicator());
       },
       error: (error, stack) {
-        debugPrint(
-          '[MediaKitVideoPlayer] Error loading video controller: $error',
-        );
+        debugPrint('[MediaKitVideoPlayer] Error: $error');
         return Center(child: Text('Error: $error'));
       },
     );
