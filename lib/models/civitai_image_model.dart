@@ -28,7 +28,7 @@ class ImageMeta with _$ImageMeta {
   const factory ImageMeta({
     @JsonKey(name: 'prompt') String? prompt,
     @JsonKey(name: 'negativePrompt') String? negativePrompt,
-    @Default([]) List<String> tags,
+    @JsonKey(name: 'tags') @Default(<String>[]) List<String>? tags,
   }) = _ImageMeta;
 
   // Entry point for the code generator to create _$ImageMetaFromJson.

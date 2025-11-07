@@ -18,7 +18,7 @@ _$ImageMetaImpl _$$ImageMetaImplFromJson(Map<String, dynamic> json) =>
       negativePrompt: json['negativePrompt'] as String?,
       tags:
           (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
-          const [],
+          const <String>[],
     );
 
 Map<String, dynamic> _$$ImageMetaImplToJson(_$ImageMetaImpl instance) =>

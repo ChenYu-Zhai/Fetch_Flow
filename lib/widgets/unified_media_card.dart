@@ -171,10 +171,11 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
       }
     }
   }
-void _showPreview(BuildContext context) {
-  // ✅ 改为打开悬浮预览
-  openFloatingPreview(ref, widget.post);
-}
+
+  void _showPreview(BuildContext context) {
+    // ✅ 改为打开悬浮预览
+    openFloatingPreview(ref, widget.post);
+  }
 }
 
 class _MediaArea extends StatelessWidget {
@@ -280,27 +281,30 @@ class _ImageRenderer extends ConsumerWidget {
     this.alignment = Alignment.center,
     this.fit = BoxFit.contain,
   });
-
+  
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cacheManager = ref.watch(customCacheManagerProvider);
-    return CachedNetworkImage(
-      cacheManager: cacheManager,
-      imageUrl: imageUrl,
-      fit: BoxFit.contain,
-      alignment: alignment,
-      fadeInDuration: const Duration(milliseconds: 50),
-      fadeOutDuration: const Duration(milliseconds: 20),
-      placeholder: (context, url) => const SizedBox.shrink(),
-      errorWidget: (context, url, error) => Container(
-        color: Colors.grey.shade300,
-        child: const Icon(Icons.broken_image, size: 16),
+    return Center(
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: CachedNetworkImage(
+          cacheManager: cacheManager,
+          imageUrl: imageUrl,
+          fit: BoxFit.contain,
+          alignment: alignment,
+          fadeInDuration: const Duration(milliseconds: 50),
+          fadeOutDuration: const Duration(milliseconds: 20),
+          placeholder: (context, url) => const SizedBox.shrink(),
+          errorWidget: (context, url, error) => Container(
+            color: Colors.grey.shade300,
+            child: const Icon(Icons.broken_image, size: 16),
+          ),
+        ),
       ),
     );
   }
 }
-
-
 
 // ✅ FIXED: 修正所有问题
 class TagDetailsDialog extends StatelessWidget {

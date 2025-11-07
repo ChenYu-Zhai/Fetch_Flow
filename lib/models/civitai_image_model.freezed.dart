@@ -178,7 +178,8 @@ mixin _$ImageMeta {
   String? get prompt => throw _privateConstructorUsedError;
   @JsonKey(name: 'negativePrompt')
   String? get negativePrompt => throw _privateConstructorUsedError;
-  List<String> get tags => throw _privateConstructorUsedError;
+  @JsonKey(name: 'tags')
+  List<String>? get tags => throw _privateConstructorUsedError;
 
   /// Serializes this ImageMeta to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -198,7 +199,7 @@ abstract class $ImageMetaCopyWith<$Res> {
   $Res call({
     @JsonKey(name: 'prompt') String? prompt,
     @JsonKey(name: 'negativePrompt') String? negativePrompt,
-    List<String> tags,
+    @JsonKey(name: 'tags') List<String>? tags,
   });
 }
 
@@ -219,7 +220,7 @@ class _$ImageMetaCopyWithImpl<$Res, $Val extends ImageMeta>
   $Res call({
     Object? prompt = freezed,
     Object? negativePrompt = freezed,
-    Object? tags = null,
+    Object? tags = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -231,10 +232,10 @@ class _$ImageMetaCopyWithImpl<$Res, $Val extends ImageMeta>
                 ? _value.negativePrompt
                 : negativePrompt // ignore: cast_nullable_to_non_nullable
                       as String?,
-            tags: null == tags
+            tags: freezed == tags
                 ? _value.tags
                 : tags // ignore: cast_nullable_to_non_nullable
-                      as List<String>,
+                      as List<String>?,
           )
           as $Val,
     );
@@ -253,7 +254,7 @@ abstract class _$$ImageMetaImplCopyWith<$Res>
   $Res call({
     @JsonKey(name: 'prompt') String? prompt,
     @JsonKey(name: 'negativePrompt') String? negativePrompt,
-    List<String> tags,
+    @JsonKey(name: 'tags') List<String>? tags,
   });
 }
 
@@ -273,7 +274,7 @@ class __$$ImageMetaImplCopyWithImpl<$Res>
   $Res call({
     Object? prompt = freezed,
     Object? negativePrompt = freezed,
-    Object? tags = null,
+    Object? tags = freezed,
   }) {
     return _then(
       _$ImageMetaImpl(
@@ -285,10 +286,10 @@ class __$$ImageMetaImplCopyWithImpl<$Res>
             ? _value.negativePrompt
             : negativePrompt // ignore: cast_nullable_to_non_nullable
                   as String?,
-        tags: null == tags
+        tags: freezed == tags
             ? _value._tags
             : tags // ignore: cast_nullable_to_non_nullable
-                  as List<String>,
+                  as List<String>?,
       ),
     );
   }
@@ -300,7 +301,7 @@ class _$ImageMetaImpl implements _ImageMeta {
   const _$ImageMetaImpl({
     @JsonKey(name: 'prompt') this.prompt,
     @JsonKey(name: 'negativePrompt') this.negativePrompt,
-    final List<String> tags = const [],
+    @JsonKey(name: 'tags') final List<String>? tags = const <String>[],
   }) : _tags = tags;
 
   factory _$ImageMetaImpl.fromJson(Map<String, dynamic> json) =>
@@ -312,13 +313,15 @@ class _$ImageMetaImpl implements _ImageMeta {
   @override
   @JsonKey(name: 'negativePrompt')
   final String? negativePrompt;
-  final List<String> _tags;
+  final List<String>? _tags;
   @override
-  @JsonKey()
-  List<String> get tags {
+  @JsonKey(name: 'tags')
+  List<String>? get tags {
+    final value = _tags;
+    if (value == null) return null;
     if (_tags is EqualUnmodifiableListView) return _tags;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_tags);
+    return EqualUnmodifiableListView(value);
   }
 
   @override
@@ -364,7 +367,7 @@ abstract class _ImageMeta implements ImageMeta {
   const factory _ImageMeta({
     @JsonKey(name: 'prompt') final String? prompt,
     @JsonKey(name: 'negativePrompt') final String? negativePrompt,
-    final List<String> tags,
+    @JsonKey(name: 'tags') final List<String>? tags,
   }) = _$ImageMetaImpl;
 
   factory _ImageMeta.fromJson(Map<String, dynamic> json) =
@@ -377,7 +380,8 @@ abstract class _ImageMeta implements ImageMeta {
   @JsonKey(name: 'negativePrompt')
   String? get negativePrompt;
   @override
-  List<String> get tags;
+  @JsonKey(name: 'tags')
+  List<String>? get tags;
 
   /// Create a copy of ImageMeta
   /// with the given fields replaced by the non-null parameter values.
