@@ -149,7 +149,7 @@ class MediaPreviewDialog extends ConsumerWidget {
     // Prioritize copying Civitai's Prompt; if not available, copy Rule34's Tags.
     // 优先尝试复制 Civitai 的 Prompt，如果没有则复制 Rule34 的 Tags。
     String textToCopy =
-        post.originalData['meta']?['prompt'] ?? post.tags.join(' ');
+        post.originalData!['meta']?['prompt'] ?? post.tags!.join(' ');
 
     if (textToCopy.isNotEmpty) {
       await Clipboard.setData(ClipboardData(text: textToCopy));

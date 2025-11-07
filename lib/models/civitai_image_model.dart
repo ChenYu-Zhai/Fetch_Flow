@@ -48,7 +48,7 @@ class CivitaiImageModel with _$CivitaiImageModel {
   const factory CivitaiImageModel({
     required int id,
     required String url,
-    required String hash,
+    required String? hash,
 
     // Use @Default to provide default values for potentially missing fields, enhancing robustness.
     // 使用 @Default 为可能缺失的字段提供默认值，增强鲁棒性。

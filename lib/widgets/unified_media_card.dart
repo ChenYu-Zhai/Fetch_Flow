@@ -32,10 +32,10 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
 
   String get _hoverInfoText {
     if (widget.post.source == 'civitai') {
-      return widget.post.originalData['meta']?['prompt'] ??
-          widget.post.tags.take(5).join(', ');
+      return widget.post.originalData!['meta']?['prompt'] ??
+          widget.post.tags!.take(5).join(', ');
     }
-    return widget.post.tags.take(5).join(', ');
+    return widget.post.tags!.take(5).join(', ');
   }
 
   String get _badgeText {
@@ -313,7 +313,7 @@ class TagDetailsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dynamic meta = post.originalData['meta'];
+    final dynamic meta = post.originalData!['meta'];
     String? prompt;
     if (post.source == 'civitai' &&
         meta is Map<String, dynamic> &&
@@ -324,7 +324,7 @@ class TagDetailsDialog extends StatelessWidget {
 
     final String content = (prompt != null && prompt.isNotEmpty)
         ? prompt
-        : post.tags.join(', ');
+        : post.tags!.join(', ');
 
     final items = content
         .split(',')

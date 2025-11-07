@@ -33,7 +33,7 @@ _$CivitaiImageModelImpl _$$CivitaiImageModelImplFromJson(
 ) => _$CivitaiImageModelImpl(
   id: (json['id'] as num).toInt(),
   url: json['url'] as String,
-  hash: json['hash'] as String,
+  hash: json['hash'] as String?,
   width: (json['width'] as num?)?.toInt() ?? 1024,
   height: (json['height'] as num?)?.toInt() ?? 1024,
   nsfw: json['nsfw'] as bool? ?? false,

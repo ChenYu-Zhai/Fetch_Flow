@@ -121,7 +121,7 @@ class _FloatingPreviewContentState extends ConsumerState<FloatingPreviewContent>
                     children: [
                       Expanded(
                         child: Text(
-                          widget.post.tags.take(3).join(', '),
+                          widget.post.tags!.take(3).join(', '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: Colors.white, fontSize: 12),

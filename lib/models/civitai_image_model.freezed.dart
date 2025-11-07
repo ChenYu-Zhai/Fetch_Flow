@@ -399,7 +399,7 @@ CivitaiImageModel _$CivitaiImageModelFromJson(Map<String, dynamic> json) {
 mixin _$CivitaiImageModel {
   int get id => throw _privateConstructorUsedError;
   String get url => throw _privateConstructorUsedError;
-  String get hash =>
+  String? get hash =>
       throw _privateConstructorUsedError; // Use @Default to provide default values for potentially missing fields, enhancing robustness.
   // 使用 @Default 为可能缺失的字段提供默认值，增强鲁棒性。
   int get width => throw _privateConstructorUsedError;
@@ -437,7 +437,7 @@ abstract class $CivitaiImageModelCopyWith<$Res> {
   $Res call({
     int id,
     String url,
-    String hash,
+    String? hash,
     int width,
     int height,
     bool nsfw,
@@ -468,7 +468,7 @@ class _$CivitaiImageModelCopyWithImpl<$Res, $Val extends CivitaiImageModel>
   $Res call({
     Object? id = null,
     Object? url = null,
-    Object? hash = null,
+    Object? hash = freezed,
     Object? width = null,
     Object? height = null,
     Object? nsfw = null,
@@ -487,10 +487,10 @@ class _$CivitaiImageModelCopyWithImpl<$Res, $Val extends CivitaiImageModel>
                 ? _value.url
                 : url // ignore: cast_nullable_to_non_nullable
                       as String,
-            hash: null == hash
+            hash: freezed == hash
                 ? _value.hash
                 : hash // ignore: cast_nullable_to_non_nullable
-                      as String,
+                      as String?,
             width: null == width
                 ? _value.width
                 : width // ignore: cast_nullable_to_non_nullable
@@ -565,7 +565,7 @@ abstract class _$$CivitaiImageModelImplCopyWith<$Res>
   $Res call({
     int id,
     String url,
-    String hash,
+    String? hash,
     int width,
     int height,
     bool nsfw,
@@ -597,7 +597,7 @@ class __$$CivitaiImageModelImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? url = null,
-    Object? hash = null,
+    Object? hash = freezed,
     Object? width = null,
     Object? height = null,
     Object? nsfw = null,
@@ -616,10 +616,10 @@ class __$$CivitaiImageModelImplCopyWithImpl<$Res>
             ? _value.url
             : url // ignore: cast_nullable_to_non_nullable
                   as String,
-        hash: null == hash
+        hash: freezed == hash
             ? _value.hash
             : hash // ignore: cast_nullable_to_non_nullable
-                  as String,
+                  as String?,
         width: null == width
             ? _value.width
             : width // ignore: cast_nullable_to_non_nullable
@@ -677,7 +677,7 @@ class _$CivitaiImageModelImpl extends _CivitaiImageModel {
   @override
   final String url;
   @override
-  final String hash;
+  final String? hash;
   // Use @Default to provide default values for potentially missing fields, enhancing robustness.
   // 使用 @Default 为可能缺失的字段提供默认值，增强鲁棒性。
   @override
@@ -766,7 +766,7 @@ abstract class _CivitaiImageModel extends CivitaiImageModel {
   const factory _CivitaiImageModel({
     required final int id,
     required final String url,
-    required final String hash,
+    required final String? hash,
     final int width,
     final int height,
     final bool nsfw,
@@ -785,7 +785,7 @@ abstract class _CivitaiImageModel extends CivitaiImageModel {
   @override
   String get url;
   @override
-  String get hash; // Use @Default to provide default values for potentially missing fields, enhancing robustness.
+  String? get hash; // Use @Default to provide default values for potentially missing fields, enhancing robustness.
   // 使用 @Default 为可能缺失的字段提供默认值，增强鲁棒性。
   @override
   int get width;

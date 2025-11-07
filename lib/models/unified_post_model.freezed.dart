@@ -34,12 +34,12 @@ mixin _$UnifiedPostModel {
   MediaType get mediaType =>
       throw _privateConstructorUsedError; // --- Additional information ---
   // --- 附加信息 ---
-  List<String> get tags => throw _privateConstructorUsedError;
+  List<String>? get tags => throw _privateConstructorUsedError;
   String? get author => throw _privateConstructorUsedError;
   int? get score => throw _privateConstructorUsedError; // --- Metadata ---
   // --- 元数据 ---
   String? get detailsUrl => throw _privateConstructorUsedError;
-  Map<String, dynamic> get originalData => throw _privateConstructorUsedError;
+  Map<String, dynamic>? get originalData => throw _privateConstructorUsedError;
 
   /// Serializes this UnifiedPostModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -66,11 +66,11 @@ abstract class $UnifiedPostModelCopyWith<$Res> {
     int width,
     int height,
     MediaType mediaType,
-    List<String> tags,
+    List<String>? tags,
     String? author,
     int? score,
     String? detailsUrl,
-    Map<String, dynamic> originalData,
+    Map<String, dynamic>? originalData,
   });
 }
 
@@ -96,11 +96,11 @@ class _$UnifiedPostModelCopyWithImpl<$Res, $Val extends UnifiedPostModel>
     Object? width = null,
     Object? height = null,
     Object? mediaType = null,
-    Object? tags = null,
+    Object? tags = freezed,
     Object? author = freezed,
     Object? score = freezed,
     Object? detailsUrl = freezed,
-    Object? originalData = null,
+    Object? originalData = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -132,10 +132,10 @@ class _$UnifiedPostModelCopyWithImpl<$Res, $Val extends UnifiedPostModel>
                 ? _value.mediaType
                 : mediaType // ignore: cast_nullable_to_non_nullable
                       as MediaType,
-            tags: null == tags
+            tags: freezed == tags
                 ? _value.tags
                 : tags // ignore: cast_nullable_to_non_nullable
-                      as List<String>,
+                      as List<String>?,
             author: freezed == author
                 ? _value.author
                 : author // ignore: cast_nullable_to_non_nullable
@@ -148,10 +148,10 @@ class _$UnifiedPostModelCopyWithImpl<$Res, $Val extends UnifiedPostModel>
                 ? _value.detailsUrl
                 : detailsUrl // ignore: cast_nullable_to_non_nullable
                       as String?,
-            originalData: null == originalData
+            originalData: freezed == originalData
                 ? _value.originalData
                 : originalData // ignore: cast_nullable_to_non_nullable
-                      as Map<String, dynamic>,
+                      as Map<String, dynamic>?,
           )
           as $Val,
     );
@@ -175,11 +175,11 @@ abstract class _$$UnifiedPostModelImplCopyWith<$Res>
     int width,
     int height,
     MediaType mediaType,
-    List<String> tags,
+    List<String>? tags,
     String? author,
     int? score,
     String? detailsUrl,
-    Map<String, dynamic> originalData,
+    Map<String, dynamic>? originalData,
   });
 }
 
@@ -204,11 +204,11 @@ class __$$UnifiedPostModelImplCopyWithImpl<$Res>
     Object? width = null,
     Object? height = null,
     Object? mediaType = null,
-    Object? tags = null,
+    Object? tags = freezed,
     Object? author = freezed,
     Object? score = freezed,
     Object? detailsUrl = freezed,
-    Object? originalData = null,
+    Object? originalData = freezed,
   }) {
     return _then(
       _$UnifiedPostModelImpl(
@@ -240,10 +240,10 @@ class __$$UnifiedPostModelImplCopyWithImpl<$Res>
             ? _value.mediaType
             : mediaType // ignore: cast_nullable_to_non_nullable
                   as MediaType,
-        tags: null == tags
+        tags: freezed == tags
             ? _value._tags
             : tags // ignore: cast_nullable_to_non_nullable
-                  as List<String>,
+                  as List<String>?,
         author: freezed == author
             ? _value.author
             : author // ignore: cast_nullable_to_non_nullable
@@ -256,10 +256,10 @@ class __$$UnifiedPostModelImplCopyWithImpl<$Res>
             ? _value.detailsUrl
             : detailsUrl // ignore: cast_nullable_to_non_nullable
                   as String?,
-        originalData: null == originalData
+        originalData: freezed == originalData
             ? _value._originalData
             : originalData // ignore: cast_nullable_to_non_nullable
-                  as Map<String, dynamic>,
+                  as Map<String, dynamic>?,
       ),
     );
   }
@@ -276,11 +276,11 @@ class _$UnifiedPostModelImpl implements _UnifiedPostModel {
     required this.width,
     required this.height,
     required this.mediaType,
-    final List<String> tags = const [],
+    final List<String>? tags = const [],
     this.author,
     this.score,
     this.detailsUrl,
-    final Map<String, dynamic> originalData = const {},
+    final Map<String, dynamic>? originalData = const {},
   }) : _tags = tags,
        _originalData = originalData;
 
@@ -307,15 +307,17 @@ class _$UnifiedPostModelImpl implements _UnifiedPostModel {
   final MediaType mediaType;
   // --- Additional information ---
   // --- 附加信息 ---
-  final List<String> _tags;
+  final List<String>? _tags;
   // --- Additional information ---
   // --- 附加信息 ---
   @override
   @JsonKey()
-  List<String> get tags {
+  List<String>? get tags {
+    final value = _tags;
+    if (value == null) return null;
     if (_tags is EqualUnmodifiableListView) return _tags;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_tags);
+    return EqualUnmodifiableListView(value);
   }
 
   @override
@@ -326,13 +328,15 @@ class _$UnifiedPostModelImpl implements _UnifiedPostModel {
   // --- 元数据 ---
   @override
   final String? detailsUrl;
-  final Map<String, dynamic> _originalData;
+  final Map<String, dynamic>? _originalData;
   @override
   @JsonKey()
-  Map<String, dynamic> get originalData {
+  Map<String, dynamic>? get originalData {
+    final value = _originalData;
+    if (value == null) return null;
     if (_originalData is EqualUnmodifiableMapView) return _originalData;
     // ignore: implicit_dynamic_type
-    return EqualUnmodifiableMapView(_originalData);
+    return EqualUnmodifiableMapView(value);
   }
 
   @override
@@ -410,11 +414,11 @@ abstract class _UnifiedPostModel implements UnifiedPostModel {
     required final int width,
     required final int height,
     required final MediaType mediaType,
-    final List<String> tags,
+    final List<String>? tags,
     final String? author,
     final int? score,
     final String? detailsUrl,
-    final Map<String, dynamic> originalData,
+    final Map<String, dynamic>? originalData,
   }) = _$UnifiedPostModelImpl;
 
   factory _UnifiedPostModel.fromJson(Map<String, dynamic> json) =
@@ -439,7 +443,7 @@ abstract class _UnifiedPostModel implements UnifiedPostModel {
   MediaType get mediaType; // --- Additional information ---
   // --- 附加信息 ---
   @override
-  List<String> get tags;
+  List<String>? get tags;
   @override
   String? get author;
   @override
@@ -448,7 +452,7 @@ abstract class _UnifiedPostModel implements UnifiedPostModel {
   @override
   String? get detailsUrl;
   @override
-  Map<String, dynamic> get originalData;
+  Map<String, dynamic>? get originalData;
 
   /// Create a copy of UnifiedPostModel
   /// with the given fields replaced by the non-null parameter values.
