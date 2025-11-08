@@ -1,58 +1,76 @@
+// lib/widgets/fullscreen_preview_content.dart
+
 import 'dart:math';
+import 'package:featch_flow/config/network_config.dart';
+import 'package:featch_flow/models/unified_post_model.dart';
+import 'package:featch_flow/providers/video_controller_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:featch_flow/models/unified_post_model.dart';
-import 'package:featch_flow/providers/floating_preview_provider.dart';
-import 'package:featch_flow/providers/video_controller_provider.dart';
-import 'package:featch_flow/widgets/download_button.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:photo_view/photo_view.dart';
 
-class FloatingPreviewContent extends ConsumerStatefulWidget {
+class FullscreenPreviewContent extends ConsumerStatefulWidget {
   final UnifiedPostModel post;
   final VoidCallback onClose;
-  const FloatingPreviewContent({super.key, required this.post, required this.onClose});
+
+  const FullscreenPreviewContent({
+    super.key,
+    required this.post,
+    required this.onClose,
+  });
 
   @override
-  ConsumerState<FloatingPreviewContent> createState() => _FloatingPreviewContentState();
+  ConsumerState<FullscreenPreviewContent> createState() =>
+      _FullscreenPreviewContentState();
 }
 
-class _FloatingPreviewContentState extends ConsumerState<FloatingPreviewContent> {
-  /* 异步控制器 */
-  VideoController? _controller;
-  bool _isLoading = true;
+class _FullscreenPreviewContentState
+    extends ConsumerState<FullscreenPreviewContent> {
+  bool _isLoadingVideo = true;
+  bool _isDisposed = false;
   String? _error;
-
+  late VideoController controller;
   @override
   void initState() {
     super.initState();
-    _initController();
+    if (widget.post.mediaType == MediaType.video) {
+      setState(() {
+        _isLoadingVideo = true;
+      });
+    }
   }
 
-  Future<void> _initController() async {
-    if (widget.post.mediaType != MediaType.video) return; // 图片无需控制器
+  Future<void> _initializePlayer() async {
+    if (_isDisposed) {
+      controller.player.setVolume(0.0);
+      return;
+    }
+
     try {
-      // 用 ref.read 拿到 provider，然后 await 它
-      final asyncCtrl = await ref.read(
-        videoControllerProvider(
-          VideoPlayerConfig(
-            videoUrl: widget.post.fullImageUrl,
-            autoplay: true,
-            loop: true,
-          ),
-        ).future,
-      );
+      controller = ref.watch(videoControllerProvider(widget.post.fullImageUrl));
+      if (_isDisposed) return;
+
+      try {
+        controller.player.setVolume(100.0);
+        controller.player.setPlaylistMode(PlaylistMode.single);
+      } catch (e) {
+        debugPrint('⚠️ 配置播放器失败: $e');
+      }
+
+      if (_isDisposed) return;
+
       if (mounted) {
-        setState(() {
-          _controller = asyncCtrl;
-          _isLoading = false;
-        });
+        setState(() => _isLoadingVideo = false);
       }
     } catch (e) {
-      if (mounted) {
+      debugPrint('❌ 视频加载失败: ${widget.post.fullImageUrl}, error: $e');
+      if (!_isDisposed && mounted) {
         setState(() {
           _error = e.toString();
-          _isLoading = false;
+          _isLoadingVideo = false;
         });
       }
     }
@@ -60,84 +78,85 @@ class _FloatingPreviewContentState extends ConsumerState<FloatingPreviewContent>
 
   @override
   void dispose() {
-    /* 弹窗销毁时让 provider 自己决定是否释放 */
+    _isDisposed = true;
+    controller.player.setVolume(0.0);
     super.dispose();
   }
 
-  /* --------------- UI --------------- */
   @override
   Widget build(BuildContext context) {
-    final isVideo = widget.post.mediaType == MediaType.video;
+    if (_isDisposed) return const SizedBox();
 
-    return Material(
-      type: MaterialType.transparency,
-      child: Center(
-        child: Container(
-          constraints: BoxConstraints(
-            maxWidth: min(600, MediaQuery.of(context).size.width * 0.9),
-            maxHeight: min(800, MediaQuery.of(context).size.height * 0.9),
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(child: _buildMedia()),
+          Positioned(
+            top: 40,
+            right: 16,
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 30),
+              onPressed: widget.onClose,
+            ),
           ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Theme.of(context).cardColor,
-          ),
-          child: Stack(
-            children: [
-              /* ① 媒体区域：统一处理 */
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: _buildMedia(),
-                ),
-              ),
-
-              /* ② 关闭按钮 */
-              Positioned(
-                top: 8,
-                right: 8,
-                child: IconButton(
-                  icon: const Icon(Icons.close,
-                      color: Colors.white,
-                      shadows: [Shadow(color: Colors.black, blurRadius: 2)]),
-                  onPressed: widget.onClose,
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildMedia() {
-    /* 图片：直接渲染 */
+    final controller = ref.watch(
+      videoControllerProvider(widget.post.fullImageUrl),
+    );
     if (widget.post.mediaType != MediaType.video) {
-      return CachedNetworkImage(
-        imageUrl: widget.post.fullImageUrl,
-        fit: BoxFit.contain,
-        alignment: Alignment.center,
-        placeholder: (_, __) => const SizedBox.shrink(),
-        errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
-      );
-    }
-
-    /* 视频：三种状态 */
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_error != null || _controller == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white, size: 36),
-            const SizedBox(height: 8),
-            Text('加载失败: $_error', style: const TextStyle(color: Colors.white)),
-          ],
+      return InteractiveViewer(
+        panEnabled: true,
+        minScale: 0.5,
+        maxScale: 4.0,
+        child: CachedNetworkImage(
+          imageUrl: widget.post.fullImageUrl,
+          fit: BoxFit.contain,
+          placeholder: (_, __) =>
+              const Center(child: CircularProgressIndicator()),
+          errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
         ),
       );
     }
+    // 视频部分
+    else if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            '视频加载失败:\n$_error',
+            style: const TextStyle(color: Colors.white),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    } else if (!_isDisposed && _isLoadingVideo && controller != null) {
+      _initializePlayer();
+    } else if (_isLoadingVideo || controller == null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          CachedNetworkImage(
+            imageUrl: widget.post.previewImageUrl,
+            fit: BoxFit.contain,
+          ),
+          const Center(child: CircularProgressIndicator(color: Colors.white)),
+        ],
+      );
+    }
 
-    return Video(controller: _controller!);
+    return InteractiveViewer(
+      panEnabled: true,
+      scaleEnabled: true,
+      minScale: 1.0,
+      maxScale: 4.0,
+      boundaryMargin: const EdgeInsets.all(100),
+      child: Video(controller: controller, fit: BoxFit.contain),
+    );
   }
 }

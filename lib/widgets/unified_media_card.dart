@@ -5,79 +5,30 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:featch_flow/models/unified_post_model.dart';
 import 'package:featch_flow/providers/floating_preview_provider.dart';
 import 'package:featch_flow/providers/settings_provider.dart';
-import 'package:featch_flow/providers/video_controller_provider.dart';
 import 'package:featch_flow/widgets/download_button.dart';
-import 'package:featch_flow/widgets/media_preview_dialog.dart';
+import 'package:featch_flow/widgets/intelligent_video_player.dart'; // ✅ 【重要】导入我们新的 Widget
 import 'package:featch_flow/widgets/show_tag_button.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:featch_flow/providers/cache_manager_provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-class UnifiedMediaCard extends ConsumerStatefulWidget {
+
+// ✅ 整个 State 都变得非常简单
+class UnifiedMediaCard extends ConsumerWidget { // ⬅️ 可以考虑转为 ConsumerWidget，因为大部分 state 没了
   final UnifiedPostModel post;
   const UnifiedMediaCard({super.key, required this.post});
 
   @override
-  ConsumerState<UnifiedMediaCard> createState() => _UnifiedMediaCardState();
-}
-
-class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
-  final _isHovering = ValueNotifier<bool>(false);
-  bool _isVisible = false;
-  late String _currentPostId;
-  Timer? _disposeTimer;
-
-  String get _hoverInfoText {
-    if (widget.post.source == 'civitai') {
-      return widget.post.originalData!['meta']?['prompt'] ??
-          widget.post.tags!.take(5).join(', ');
-    }
-    return widget.post.tags!.take(5).join(', ');
-  }
-
-  String get _badgeText {
-    final type = widget.post.mediaType.toString().split('.').last.toUpperCase();
-    final resolution = '${widget.post.width}×${widget.post.height}';
-    return '$type • $resolution';
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _currentPostId = widget.post.id;
-    debugPrint('🎬 [UnifiedMediaCard] INIT: ${widget.post.id}');
-  }
-
-  @override
-  void didUpdateWidget(UnifiedMediaCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.post.id != _currentPostId) {
-      debugPrint(
-        '🔄 [UnifiedMediaCard] POST CHANGED: $_currentPostId -> ${widget.post.id}',
-      );
-      _currentPostId = widget.post.id;
-      _isVisible = false;
-      _disposeTimer?.cancel();
-      _isHovering.value = false;
-    }
-  }
-
-  @override
-  void dispose() {
-    debugPrint('🗑️ [UnifiedMediaCard] DISPOSE: $_currentPostId');
-    _disposeTimer?.cancel();
-    _isHovering.dispose();
-    super.dispose();
-  }
-  // lib/widgets/unified_media_card.dart
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cardHeight = ref.watch(cardHeightProvider);
+    final isHovering = ValueNotifier<bool>(false); // 可以在 build 方法内创建
+
+    // Badge 和 Hover Text 的逻辑可以移到这里
+    final String badgeText = '${post.mediaType.toString().split('.').last.toUpperCase()} • ${post.width}×${post.height}';
+    final String hoverInfoText = post.tags?.take(5).join(', ') ?? '';
 
     return SizedBox(
       height: cardHeight,
@@ -87,121 +38,71 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
           color: Theme.of(context).canvasColor,
           border: Border.all(color: Colors.grey.withAlpha(25), width: 0.5),
         ),
-        child: LayoutBuilder(
-          // ⬅️ 拿可用尺寸
-          builder: (_, constraints) {
-            return Column(
-              children: [
-                Expanded(
-                  child: _MediaArea(
-                    post: widget.post,
-                    isHovering: _isHovering,
-                    onTap: () => _showPreview(context),
-                    onVisibilityChanged: _handleVisibilityChange,
-                    badgeText: _badgeText,
-                    hoverInfoText: _hoverInfoText,
-                    child: Hero(
-                      tag: widget.post.id,
-                      child: Center(child: _buildMediaContent()),
-                    ),
-                  ),
+        child: Column(
+          children: [
+            Expanded(
+              child: _MediaArea(
+                post: post,
+                isHovering: isHovering,
+                onTap: () => openFloatingPreview(ref, post),
+                // ❌ 不再需要 onVisibilityChanged 回调
+                // onVisibilityChanged: _handleVisibilityChange, 
+                badgeText: badgeText,
+                hoverInfoText: hoverInfoText,
+                child: Hero(
+                  tag: post.id,
+                  // ✅ 核心修改在这里
+                  child: Center(child: _buildMediaContent()),
                 ),
-
-                // ② 底部按钮栏：固定高度 44，永远贴底
-                SizedBox(
-                  height: 44,
-                  child: _buildButtonBar(context), // ⬅️ 你的按钮栏
-                ),
-              ],
-            );
-          },
+              ),
+            ),
+            SizedBox(
+              height: 44,
+              child: _buildButtonBar(),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildButtonBar(BuildContext context) {
+  // ✅ 媒体构建逻辑变得极其简单
+  Widget _buildMediaContent() {
+    if (post.mediaType == MediaType.video && post.fullImageUrl.isNotEmpty) {
+      // 如果是视频，直接使用 IntelligentVideoPlayer
+      return IntelligentVideoPlayer(
+        videoUrl: post.fullImageUrl, // ⬅️ 使用 videoUrl
+        previewImageUrl: post.previewImageUrl,
+      );
+    }
+
+    // 否则，使用 ImageRenderer
+    return ImageRenderer(
+      imageUrl: post.previewImageUrl,
+      fit: BoxFit.contain,
+      alignment: Alignment.center,
+    );
+  }
+
+  Widget _buildButtonBar() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        ShowTagButton(post: widget.post),
-        DownloadButton(post: widget.post),
+        ShowTagButton(post: post),
+        DownloadButton(post: post),
       ],
     );
   }
-
-  // ✅ 简化：移除高度计算逻辑
-  Widget _buildMediaContent() {
-    if (widget.post.mediaType == MediaType.video) {
-      final videoProvider = videoControllerProvider(
-        VideoPlayerConfig(
-          videoUrl: widget.post.fullImageUrl,
-          autoplay: false,
-          loop: true,
-        ),
-      );
-      final asyncController = ref.watch(videoProvider);
-
-      return asyncController.when(
-        data: (controller) {
-          if (_isVisible)
-            controller.player.play();
-          else
-            controller.player.pause();
-          return Video(controller: controller);
-        },
-        loading: () => _ImageRenderer(
-          imageUrl: widget.post.previewImageUrl,
-          fit: BoxFit.contain, // ✅ 保持原比例
-          alignment: Alignment.center, // ✅ 明确居中
-        ),
-        error: (error, stack) =>
-            const Center(child: Icon(Icons.error, size: 20)),
-      );
-    }
-
-    return _ImageRenderer(
-      imageUrl: widget.post.previewImageUrl,
-      fit: BoxFit.contain, // ✅ 保持原比例
-      alignment: Alignment.center, // ✅ 明确居中
-    );
-  }
-
-  void _handleVisibilityChange(VisibilityInfo info) {
-    final visibleFraction = info.visibleFraction;
-    debugPrint(
-      '👁️ [UnifiedMediaCard] Visibility: ${widget.post.id} = $visibleFraction',
-    );
-
-    if (visibleFraction < 0.1) {
-      _disposeTimer?.cancel();
-      _disposeTimer = Timer(const Duration(seconds: 2), () {
-        if (!mounted) return;
-        if (_isVisible) {
-          setState(() => _isVisible = false);
-          debugPrint('🔄 [${widget.post.id}] Set _isVisible = false');
-        }
-      });
-    } else {
-      _disposeTimer?.cancel();
-      if (!_isVisible && mounted) {
-        setState(() => _isVisible = true);
-        debugPrint('🔄 [${widget.post.id}] Set _isVisible = true');
-      }
-    }
-  }
-
-  void _showPreview(BuildContext context) {
-    // ✅ 改为打开悬浮预览
-    openFloatingPreview(ref, widget.post);
-  }
 }
 
+
+// ✅ _MediaArea Widget
+// 移除了不再需要的 onVisibilityChanged 参数
 class _MediaArea extends StatelessWidget {
   final UnifiedPostModel post;
   final ValueNotifier<bool> isHovering;
   final VoidCallback onTap;
-  final Function(VisibilityInfo) onVisibilityChanged;
+  // ❌ final Function(VisibilityInfo) onVisibilityChanged;
   final String badgeText;
   final String hoverInfoText;
   final Widget child;
@@ -210,7 +111,7 @@ class _MediaArea extends StatelessWidget {
     required this.post,
     required this.isHovering,
     required this.onTap,
-    required this.onVisibilityChanged,
+    // required this.onVisibilityChanged,
     required this.badgeText,
     required this.hoverInfoText,
     required this.child,
@@ -225,67 +126,47 @@ class _MediaArea extends StatelessWidget {
         onTap: onTap,
         highlightColor: Colors.transparent,
         splashColor: Colors.transparent,
-        child: VisibilityDetector(
-          key: Key(post.id),
-          onVisibilityChanged: onVisibilityChanged,
-          child: Stack(
-            children: [
-              child,
-              ValueListenableBuilder<bool>(
-                valueListenable: isHovering,
-                builder: (context, hovering, __) {
-                  return AnimatedOpacity(
-                    duration: const Duration(
-                      milliseconds: 200,
-                    ), // 动画时间可以稍长一点，效果更平滑
-                    opacity: hovering ? 1.0 : 0.0, // 我们让 Container 自身来处理透明度
-                    child: Container(
-                      // 【核心改造】使用 decoration 和 Gradient
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          // 1. 定义渐变方向
-                          //    从底部中心 (0.0, 1.0) 到 顶部中心 (0.0, -1.0)
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-
-                          // 2. 定义颜色列表
-                          //    从底部的半透明黑色，过渡到顶部的完全透明
-                          colors: [
-                            Colors.black.withOpacity(0.7), // 底部颜色，可以调整不透明度
-                            Colors.transparent, // 顶部颜色
-                          ],
-
-                          // 3. (可选) 定义颜色停止点
-                          //    stops 列表与 colors 列表一一对应，控制渐变发生的位置
-                          //    这里表示从底部 (0.0) 开始是黑色，到 70% (0.7) 的位置完全过渡为透明
-                          stops: const [0.0, 0.7],
-                        ),
+        // ❌ _MediaArea 不再需要 VisibilityDetector，
+        // 因为 IntelligentVideoPlayer 内部已经有了。
+        // 对于图片，也不需要它。
+        child: Stack(
+          fit: StackFit.expand, // 确保 Stack 填满
+          children: [
+            child, // child (Hero -> IntelligentVideoPlayer/ImageRenderer)
+            // ... 你的渐变、Badge、HoverText 逻辑保持不变 ...
+            ValueListenableBuilder<bool>(
+              valueListenable: isHovering,
+              builder: (context, hovering, __) {
+                return AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: hovering ? 1.0 : 0.0,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [ Colors.black.withOpacity(0.7), Colors.transparent ],
+                        stops: const [0.0, 0.7],
                       ),
                     ),
-                  );
-                },
-              ),
-              Positioned(top: 4, right: 4, child: _buildBadge(badgeText)),
-              _buildHoverText(hoverInfoText, isHovering),
-            ],
-          ),
+                  ),
+                );
+              },
+            ),
+            Positioned(top: 4, right: 4, child: _buildBadge(badgeText)),
+            _buildHoverText(hoverInfoText, isHovering),
+          ],
         ),
       ),
     );
   }
-
+  
+  // _buildBadge 和 _buildHoverText 方法保持不变
   Widget _buildBadge(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.7)),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      decoration: BoxDecoration(color: Colors.black.withOpacity(0.7)),
+      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
     );
   }
 
@@ -302,12 +183,7 @@ class _MediaArea extends StatelessWidget {
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 100),
             opacity: isHovering ? 1.0 : 0.0,
-            child: Text(
-              text,
-              maxLines: 99,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
+            child: Text(text, maxLines: 99, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12)),
           ),
         );
       },
@@ -315,11 +191,11 @@ class _MediaArea extends StatelessWidget {
   }
 }
 
-class _ImageRenderer extends ConsumerWidget {
+class ImageRenderer extends ConsumerWidget {
   final String imageUrl;
   final Alignment alignment;
   final BoxFit fit; // ✅ 新增
-  const _ImageRenderer({
+  const ImageRenderer({super.key, 
     required this.imageUrl,
     this.alignment = Alignment.center,
     this.fit = BoxFit.contain,
