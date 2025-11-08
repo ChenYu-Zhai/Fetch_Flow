@@ -102,37 +102,6 @@ class _FloatingPreviewContentState extends ConsumerState<FloatingPreviewContent>
                   onPressed: widget.onClose,
                 ),
               ),
-
-              /* ③ 底部操作栏 */
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.center,
-                      colors: [Colors.black87, Colors.transparent],
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          widget.post.tags!.take(3).join(', '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      DownloadButton(post: widget.post),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
         ),
