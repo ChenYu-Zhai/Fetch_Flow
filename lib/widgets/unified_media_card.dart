@@ -8,6 +8,7 @@ import 'package:featch_flow/providers/settings_provider.dart';
 import 'package:featch_flow/providers/video_controller_provider.dart';
 import 'package:featch_flow/widgets/download_button.dart';
 import 'package:featch_flow/widgets/media_preview_dialog.dart';
+import 'package:featch_flow/widgets/show_tag_button.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -76,38 +77,56 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 使用配置：卡片高度
     final cardHeight = ref.watch(cardHeightProvider);
 
     return SizedBox(
-      height: cardHeight, // ✅ 动态高度
+      height: cardHeight,
       child: Container(
-        margin: const EdgeInsets.all(2.0),
+        margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           color: Theme.of(context).canvasColor,
-          border: Border.all(
-            color: Colors.grey.withValues(alpha: 0.1),
-            width: 0.5,
-          ),
+          border: Border.all(color: Colors.grey.withAlpha(25), width: 0.5),
         ),
-        child: Column(
-          children: [
-            Expanded(
-              // ✅ 媒体区域自适应
-              child: _MediaArea(
-                post: widget.post,
-                isHovering: _isHovering,
-                onTap: () => _showPreview(context),
-                onVisibilityChanged: _handleVisibilityChange,
-                badgeText: _badgeText,
-                hoverInfoText: _hoverInfoText,
-                child: Hero(tag: widget.post.id, child: _buildMediaContent()),
-              ),
-            ),
-            const SizedBox(height: 44.0), // ✅ Footer 固定高度 44px
-          ],
+        child: LayoutBuilder(
+          // ⬅️ 拿可用尺寸
+          builder: (_, constraints) {
+            return Column(
+              children: [
+                Expanded(
+                  child: _MediaArea(
+                    post: widget.post,
+                    isHovering: _isHovering,
+                    onTap: () => _showPreview(context),
+                    onVisibilityChanged: _handleVisibilityChange,
+                    badgeText: _badgeText,
+                    hoverInfoText: _hoverInfoText,
+                    child: Hero(
+                      tag: widget.post.id,
+                      child: Center(child: _buildMediaContent()),
+                    ),
+                  ),
+                ),
+
+                // ② 底部按钮栏：固定高度 44，永远贴底
+                SizedBox(
+                  height: 44,
+                  child: _buildButtonBar(context), // ⬅️ 你的按钮栏
+                ),
+              ],
+            );
+          },
         ),
       ),
+    );
+  }
+
+  Widget _buildButtonBar(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        ShowTagButton(post: widget.post),
+        DownloadButton(post: widget.post),
+      ],
     );
   }
 
@@ -216,9 +235,33 @@ class _MediaArea extends StatelessWidget {
                 valueListenable: isHovering,
                 builder: (context, hovering, __) {
                   return AnimatedOpacity(
-                    duration: const Duration(milliseconds: 100),
-                    opacity: hovering ? 0.15 : 0.0,
-                    child: Container(color: Colors.black),
+                    duration: const Duration(
+                      milliseconds: 200,
+                    ), // 动画时间可以稍长一点，效果更平滑
+                    opacity: hovering ? 1.0 : 0.0, // 我们让 Container 自身来处理透明度
+                    child: Container(
+                      // 【核心改造】使用 decoration 和 Gradient
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          // 1. 定义渐变方向
+                          //    从底部中心 (0.0, 1.0) 到 顶部中心 (0.0, -1.0)
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+
+                          // 2. 定义颜色列表
+                          //    从底部的半透明黑色，过渡到顶部的完全透明
+                          colors: [
+                            Colors.black.withOpacity(0.7), // 底部颜色，可以调整不透明度
+                            Colors.transparent, // 顶部颜色
+                          ],
+
+                          // 3. (可选) 定义颜色停止点
+                          //    stops 列表与 colors 列表一一对应，控制渐变发生的位置
+                          //    这里表示从底部 (0.0) 开始是黑色，到 70% (0.7) 的位置完全过渡为透明
+                          stops: const [0.0, 0.7],
+                        ),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -261,9 +304,9 @@ class _MediaArea extends StatelessWidget {
             opacity: isHovering ? 1.0 : 0.0,
             child: Text(
               text,
-              maxLines: 4,
+              maxLines: 99,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 10),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),
         );
@@ -281,26 +324,21 @@ class _ImageRenderer extends ConsumerWidget {
     this.alignment = Alignment.center,
     this.fit = BoxFit.contain,
   });
-  
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cacheManager = ref.watch(customCacheManagerProvider);
-    return Center(
-      child: FittedBox(
-        fit: BoxFit.contain,
-        child: CachedNetworkImage(
-          cacheManager: cacheManager,
-          imageUrl: imageUrl,
-          fit: BoxFit.contain,
-          alignment: alignment,
-          fadeInDuration: const Duration(milliseconds: 50),
-          fadeOutDuration: const Duration(milliseconds: 20),
-          placeholder: (context, url) => const SizedBox.shrink(),
-          errorWidget: (context, url, error) => Container(
-            color: Colors.grey.shade300,
-            child: const Icon(Icons.broken_image, size: 16),
-          ),
-        ),
+    return CachedNetworkImage(
+      cacheManager: cacheManager,
+      imageUrl: imageUrl,
+      fit: BoxFit.contain,
+      alignment: alignment,
+      fadeInDuration: const Duration(milliseconds: 50),
+      fadeOutDuration: const Duration(milliseconds: 20),
+      placeholder: (context, url) => const SizedBox.shrink(),
+      errorWidget: (context, url, error) => Container(
+        color: Colors.grey.shade300,
+        child: const Icon(Icons.broken_image, size: 16),
       ),
     );
   }
@@ -334,6 +372,9 @@ class TagDetailsDialog extends StatelessWidget {
 
     return Dialog(
       backgroundColor: Theme.of(context).cardColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8), // ← 这里改小
+      ),
       child: Container(
         width: min(500, MediaQuery.of(context).size.width * 0.9),
         height: min(600, MediaQuery.of(context).size.height * 0.7),
@@ -438,11 +479,19 @@ class TagDetailsDialog extends StatelessWidget {
   }
 
   Widget _buildDialogActions(BuildContext context, List<String> items) {
+    // 1. 获取当前主题，以便访问颜色和文本样式
+    final theme = Theme.of(context);
+
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(
+        top: 16,
+        right: 8,
+        bottom: 8,
+      ), // 增加上下和右侧的 padding
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // --- “复制全部”按钮：使用 TextButton，但自定义样式 ---
           TextButton(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: items.join(', ')));
@@ -451,13 +500,48 @@ class TagDetailsDialog extends StatelessWidget {
                 context,
               ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
             },
+            style: TextButton.styleFrom(
+              // 2. 设置前景色（文本和图标颜色）
+              // 使用一个比默认更柔和的颜色，或者使用强调色
+              foregroundColor: theme.textTheme.bodyLarge?.color?.withOpacity(
+                0.8,
+              ),
+
+              // 3. 设置按钮的形状，增加圆角
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+
+              // 4. 增加内边距，让按钮看起来更大、更易于点击
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
             child: const Text('复制全部'),
           ),
-          const SizedBox(width: 6),
+
+          const SizedBox(width: 8),
+
+          // --- “关闭”按钮：使用 ElevatedButton，并应用主题色 ---
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              // 5. 设置背景色
+              // 使用 colorScheme.primary，使其与应用的主色调保持一致
+              backgroundColor: theme.colorScheme.primary,
+
+              // 6. 设置前景色（文本颜色）
+              // primary 颜色上的文本应该是亮色
+              foregroundColor: theme.colorScheme.onPrimary,
+
+              // 7. 设置阴影颜色和大小
+              elevation: 2,
+              shadowColor: Colors.black.withOpacity(0.2),
+
+              // 8. 同样设置形状和内边距
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             ),
             child: const Text('关闭'),
           ),
