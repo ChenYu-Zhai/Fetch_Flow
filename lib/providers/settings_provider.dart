@@ -50,25 +50,6 @@ class CrossAxisCountNotifier extends StateNotifier<int> {
   }
 }
 
-/// 卡片高度（持久化）
-final cardHeightProvider = StateNotifierProvider<CardHeightNotifier, double>((
-  ref,
-) {
-  final initial = _getDouble(ref, 'cardHeight', 280.0);
-  return CardHeightNotifier(ref, initial); // ✅ 传入 ref
-});
-
-class CardHeightNotifier extends StateNotifier<double> {
-  final Ref _ref;
-  CardHeightNotifier(this._ref, super.state);
-
-  Future<void> setHeight(double value) async {
-    final prefs = await _ref.read(sharedPreferencesProvider.future);
-    await prefs.setDouble('cardHeight', value);
-    state = value;
-  }
-}
-
 /// 预加载延迟（持久化）
 final preloadDelayProvider = StateNotifierProvider<PreloadDelayNotifier, int>((
   ref,

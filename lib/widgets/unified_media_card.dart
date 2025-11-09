@@ -32,7 +32,6 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final cardHeight = ref.watch(cardHeightProvider);
     final isHovering = ValueNotifier<bool>(false);
 
     final String badgeText =

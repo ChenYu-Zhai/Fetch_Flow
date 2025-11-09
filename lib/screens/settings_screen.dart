@@ -24,14 +24,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void initState() {
     super.initState();
     final initialAuthState = ref.read(authProvider);
-    _civitaiTokenController = TextEditingController(text: initialAuthState.civitaiToken);
-    _rule34TokenController = TextEditingController(text: initialAuthState.rule34Token);
-    _rule34UserIdController = TextEditingController(text: initialAuthState.rule34UserId);
-    
+    _civitaiTokenController = TextEditingController(
+      text: initialAuthState.civitaiToken,
+    );
+    _rule34TokenController = TextEditingController(
+      text: initialAuthState.rule34Token,
+    );
+    _rule34UserIdController = TextEditingController(
+      text: initialAuthState.rule34UserId,
+    );
+
     // 初始化所有 Slider 值为持久化值
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(sliderValueProvider.notifier).state = 
-        ref.read(prefetchThresholdNotifierProvider);
+      ref.read(sliderValueProvider.notifier).state = ref.read(
+        prefetchThresholdNotifierProvider,
+      );
     });
   }
 
@@ -114,13 +121,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onChanged: (newValue) {
                   final notifier = ref.read(provider.notifier);
                   if (provider == prefetchThresholdNotifierProvider) {
-                    (notifier as PrefetchThresholdNotifier).setThreshold(newValue.toInt());
-                  } else if (provider == cardHeightProvider) {
-                    (notifier as CardHeightNotifier).setHeight(newValue);
+                    (notifier as PrefetchThresholdNotifier).setThreshold(
+                      newValue.toInt(),
+                    );
                   } else if (provider == preloadDelayProvider) {
-                    (notifier as PreloadDelayNotifier).setDelay(newValue.toInt());
+                    (notifier as PreloadDelayNotifier).setDelay(
+                      newValue.toInt(),
+                    );
                   } else if (provider == crossAxisCountNotifierProvider) {
-                    (notifier as CrossAxisCountNotifier).setCount(newValue.toInt());
+                    (notifier as CrossAxisCountNotifier).setCount(
+                      newValue.toInt(),
+                    );
                   }
                 },
                 onChangeEnd: onChangeEnd,
@@ -137,7 +148,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       width: double.infinity,
       color: Theme.of(context).primaryColor.withAlpha((255 * 0.1).round()),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).primaryColor,
+        ),
+      ),
     );
   }
 
@@ -157,7 +174,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: TextField(
         controller: controller,
-        decoration: InputDecoration(labelText: labelText, border: const OutlineInputBorder(), isDense: true),
+        decoration: InputDecoration(
+          labelText: labelText,
+          border: const OutlineInputBorder(),
+          isDense: true,
+        ),
         obscureText: isObscure,
       ),
     );
@@ -168,79 +189,140 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings'), actions: [
-        IconButton(icon: const Icon(Icons.save), onPressed: _saveSettings),
-      ]),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        actions: [
+          IconButton(icon: const Icon(Icons.save), onPressed: _saveSettings),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(8.0),
         children: [
           // Performance 配置
-          Card(child: Column(children: [
-            _buildSectionHeader('Performance'),
-            _buildSliderTile(title: 'Card Height', provider: cardHeightProvider, min: 200, max: 800, divisions: 10, unit: 'px'),
-            _buildSliderTile(title: 'Preload Delay', provider: preloadDelayProvider, min: 100, max: 1000, divisions: 9, unit: 'ms'),
-            _buildSliderTile(title: 'Posts per Page', provider: prefetchThresholdNotifierProvider, min: 20, max: 200, divisions: 9, unit: ''),
-          ])),
-          
-          const SizedBox(height: 16),
-          
-          // Appearance 配置
-          Card(child: Column(children: [
-            _buildSectionHeader('Appearance'),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(children: [
-                const Expanded(child: Text('Grid Columns')),
-                SegmentedButton<int>(
-                  segments: const [
-                    ButtonSegment(value: 2, label: Text('2')),
-                    ButtonSegment(value: 3, label: Text('3')),
-                    ButtonSegment(value: 4, label: Text('4')),
-                    ButtonSegment(value: 6, label: Text('6')),
-                    ButtonSegment(value: 8, label: Text('8')),
-                  ],
-                  selected: {ref.watch(crossAxisCountNotifierProvider)},
-                  onSelectionChanged: (newSelection) {
-                    ref.read(crossAxisCountNotifierProvider.notifier).setCount(newSelection.first);
-                  },
+          Card(
+            child: Column(
+              children: [
+                _buildSectionHeader('Performance'),
+                _buildSliderTile(
+                  title: 'Preload Delay',
+                  provider: preloadDelayProvider,
+                  min: 100,
+                  max: 1000,
+                  divisions: 9,
+                  unit: 'ms',
                 ),
-              ]),
+                _buildSliderTile(
+                  title: 'Posts per Page',
+                  provider: prefetchThresholdNotifierProvider,
+                  min: 20,
+                  max: 200,
+                  divisions: 9,
+                  unit: '',
+                ),
+              ],
             ),
-          ])),
-          
+          ),
+
           const SizedBox(height: 16),
-          
+
+          // Appearance 配置
+          Card(
+            child: Column(
+              children: [
+                _buildSectionHeader('Appearance'),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('Grid Columns')),
+                      SegmentedButton<int>(
+                        segments: const [
+                          ButtonSegment(value: 2, label: Text('2')),
+                          ButtonSegment(value: 3, label: Text('3')),
+                          ButtonSegment(value: 4, label: Text('4')),
+                          ButtonSegment(value: 6, label: Text('6')),
+                          ButtonSegment(value: 8, label: Text('8')),
+                        ],
+                        selected: {ref.watch(crossAxisCountNotifierProvider)},
+                        onSelectionChanged: (newSelection) {
+                          ref
+                              .read(crossAxisCountNotifierProvider.notifier)
+                              .setCount(newSelection.first);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
           // Downloads 配置
-          Card(child: Column(children: [
-            _buildSectionHeader('Downloads'),
-            ListTile(
-              leading: const Icon(Icons.folder),
-              title: const Text('Download Location'),
-              subtitle: ref.watch(downloadPathProvider).isEmpty
-                  ? Text('Default: Downloads folder', style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontStyle: FontStyle.italic))
-                  : Text(ref.watch(downloadPathProvider), overflow: TextOverflow.ellipsis),
-              trailing: isPickingPath
-                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                  : IconButton(
-                      icon: const Icon(Icons.folder_open),
-                      onPressed: _pickDownloadPath,
-                      tooltip: 'Choose Download Path',
-                    ),
+          Card(
+            child: Column(
+              children: [
+                _buildSectionHeader('Downloads'),
+                ListTile(
+                  leading: const Icon(Icons.folder),
+                  title: const Text('Download Location'),
+                  subtitle: ref.watch(downloadPathProvider).isEmpty
+                      ? Text(
+                          'Default: Downloads folder',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.secondary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        )
+                      : Text(
+                          ref.watch(downloadPathProvider),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                  trailing: isPickingPath
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.folder_open),
+                          onPressed: _pickDownloadPath,
+                          tooltip: 'Choose Download Path',
+                        ),
+                ),
+              ],
             ),
-          ])),
-          
+          ),
+
           const SizedBox(height: 16),
-          
+
           // Authentication 配置
-          Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _buildSectionHeader('Authentication'),
-            _buildSection('Civitai'),
-            _buildTextFieldTile(controller: _civitaiTokenController, labelText: 'API Token', isObscure: true),
-            const Divider(height: 1),
-            _buildSection('Rule34'),
-            _buildTextFieldTile(controller: _rule34TokenController, labelText: 'API Key (api_key)', isObscure: true),
-            _buildTextFieldTile(controller: _rule34UserIdController, labelText: 'User ID (user_id)'),
-          ])),
+          Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionHeader('Authentication'),
+                _buildSection('Civitai'),
+                _buildTextFieldTile(
+                  controller: _civitaiTokenController,
+                  labelText: 'API Token',
+                  isObscure: true,
+                ),
+                const Divider(height: 1),
+                _buildSection('Rule34'),
+                _buildTextFieldTile(
+                  controller: _rule34TokenController,
+                  labelText: 'API Key (api_key)',
+                  isObscure: true,
+                ),
+                _buildTextFieldTile(
+                  controller: _rule34UserIdController,
+                  labelText: 'User ID (user_id)',
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
