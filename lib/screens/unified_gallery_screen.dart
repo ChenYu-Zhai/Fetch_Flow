@@ -1,15 +1,21 @@
-// lib/screens/unified_gallery_screen.dart
-
 import 'dart:async';
 import 'dart:math';
+import 'package:featch_flow/models/unified_post_model.dart';
 import 'package:featch_flow/providers/floating_preview_provider.dart';
 import 'package:featch_flow/providers/unified_gallery_provider.dart';
 import 'package:featch_flow/widgets/floating_preview_content.dart';
+import 'package:featch_flow/widgets/placeholder_card.dart';
+import 'package:featch_flow/widgets/stable_drag_scrollbar.dart';
+import 'package:featch_flow/widgets/staggered_build_wrapper.dart';
 import 'package:featch_flow/widgets/unified_media_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:featch_flow/services/media_preload_service.dart';
 import 'package:featch_flow/providers/settings_provider.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:riverpod/src/framework.dart';
+
+const double kCardFooterHeight = 44.0;
 
 class UnifiedGalleryScreen extends ConsumerStatefulWidget {
   final String sourceId;
@@ -26,13 +32,15 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
   Timer? _fetchThrottleTimer;
   Timer? _preloadThrottleTimer;
   int _lastPreloadIndex = 0;
-
+  bool _isDragging = false; 
+  late final PageStorageKey _gridKey;
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _gridKey = PageStorageKey(widget.sourceId);
     debugPrint(
-      '[UnifiedGalleryScreen] ✅ Initialized for source: ${widget.sourceId}',
+      '[UnifiedGalleryScreen] Initialized for source: ${widget.sourceId}',
     );
   }
 
@@ -41,145 +49,105 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
     _scrollController.dispose();
     _fetchThrottleTimer?.cancel();
     _preloadThrottleTimer?.cancel();
-    debugPrint(
-      '[UnifiedGalleryScreen] 🗑️ Disposed for source: ${widget.sourceId}',
-    );
     super.dispose();
+    debugPrint(
+      '[UnifiedGalleryScreen] Disposed for source: ${widget.sourceId}',
+    );
   }
 
+  Timer? _scrollThrottleTimer;
   void _onScroll() {
-    // ✅ 添加滚动位置调试
-    final pixels = _scrollController.position.pixels;
-    final maxPixels = _scrollController.position.maxScrollExtent;
-    
-    if (pixels >= maxPixels * 0.7) {
-      debugPrint('📜 [UnifiedGalleryScreen] Scroll threshold reached: ${(pixels/maxPixels*100).toStringAsFixed(1)}%');
-      _fetchNextPageThrottled();
-      _scheduleMediaPreload();
-    }
+    if (_isDragging) return;
+    _scrollThrottleTimer?.cancel();
+    _scrollThrottleTimer = Timer(
+      Duration(milliseconds: ref.watch(preloadDelayProvider)),
+      () {
+        if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent * 0.9) {
+          debugPrint("[_onScroll] 触发分页");
+          _fetchNextPageThrottled();
+        }
+        debugPrint("[_onScroll] 触发预加载");
+        _scheduleMediaPreload();
+      },
+    );
   }
 
   void _scheduleMediaPreload() {
+    if (_isDragging) return;
     if (_preloadThrottleTimer?.isActive ?? false) return;
-    
     final delay = ref.watch(preloadDelayProvider);
-    debugPrint('⏱️ [UnifiedGalleryScreen] Scheduling preload after ${delay}ms');
-    
     _preloadThrottleTimer = Timer(Duration(milliseconds: delay), () async {
-      final state = ref.read(unifiedGalleryProvider(widget.sourceId)).asData?.value;
-      if (state == null) {
-        debugPrint('⚠️ [UnifiedGalleryScreen] Skip preload: state is null');
-        return;
-      }
-
-      // ✅ 空值检查：确保列表不为空
-      if (state.posts.isEmpty) {
-        debugPrint('⚠️ [UnifiedGalleryScreen] Skip preload: posts list is empty');
-        return;
-      }
+      final state = ref
+          .read(unifiedGalleryProvider(widget.sourceId))
+          .asData
+          ?.value;
+      if (state == null) return;
 
       final cardHeight = ref.watch(cardHeightProvider);
-      final firstIndex = (_scrollController.position.pixels / cardHeight).floor() * 2;
-      
-      if (firstIndex < _lastPreloadIndex) {
-        debugPrint('⏭️ [UnifiedGalleryScreen] Skip preload: index not advanced');
-        return;
-      }
+      final firstIndex =
+          (_scrollController.position.pixels / cardHeight).floor() * 2;
+      if (firstIndex < _lastPreloadIndex) return;
 
-      final start = max(0, firstIndex - 5);
+      final start = max(0, firstIndex - 10);
       final end = min(state.posts.length, firstIndex + 10);
-      
-      // ✅ 安全截取子列表
-      if (start >= end || start >= state.posts.length) {
-        debugPrint('⚠️ [UnifiedGalleryScreen] Invalid preload range: $start..$end');
-        return;
-      }
-
       _lastPreloadIndex = firstIndex;
-      final postsToPreload = state.posts.sublist(start, end);
 
-      debugPrint('🎯 [UnifiedGalleryScreen] Preloading posts $start..$end (${postsToPreload.length} items)');
-
-      // ✅ 过滤无效帖子（id 或 url 为 null）
-      final validPosts = postsToPreload.where((post) {
-        final isValid = post.id != null && post.fullImageUrl != null;
-        if (!isValid) {
-          debugPrint('🚫 [UnifiedGalleryScreen] Skipping invalid post: id=${post.id}, url=${post.fullImageUrl}');
-        }
-        return isValid;
-      }).toList();
-
-      if (validPosts.isNotEmpty) {
-        await Future.microtask(() {
-          ref.read(mediaPreloadServiceProvider).preloadPosts(validPosts);
-        });
-        debugPrint('✅ [UnifiedGalleryScreen] Preloaded ${validPosts.length} valid posts');
-      } else {
-        debugPrint('⚠️ [UnifiedGalleryScreen] No valid posts to preload');
-      }
+      await ref
+          .read(mediaPreloadServiceProvider)
+          .preloadPosts(state.posts.sublist(start, end));
     });
   }
 
   void _fetchNextPageThrottled() {
     if (_fetchThrottleTimer?.isActive ?? false) return;
-    
     _fetchThrottleTimer = Timer(const Duration(milliseconds: 500), () {
       final state = ref.read(unifiedGalleryProvider(widget.sourceId));
-      
-      // ✅ 更健壮的 null 检查
-      final hasMore = state.asData?.value.hasMore ?? false;
-      final isLoading = state.asData?.value.isLoadingNextPage ?? false;
-      
-      debugPrint('📡 [UnifiedGalleryScreen] Fetch check: hasMore=$hasMore, isLoading=$isLoading');
-      
-      if (hasMore && !isLoading) {
-        debugPrint('⬇️ [UnifiedGalleryScreen] Fetching next page...');
-        ref.read(unifiedGalleryProvider(widget.sourceId).notifier).fetchNextPage();
-      } else {
-        debugPrint('⏭️ [UnifiedGalleryScreen] Skip fetch: hasMore=$hasMore, isLoading=$isLoading');
+      if (state.asData?.value.hasMore == true &&
+          state.asData?.value.isLoadingNextPage == false) {
+        ref
+            .read(unifiedGalleryProvider(widget.sourceId).notifier)
+            .fetchNextPage();
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final galleryStateAsync = ref.watch(unifiedGalleryProvider(widget.sourceId));
+    final galleryStateAsync = ref.watch(
+      unifiedGalleryProvider(widget.sourceId),
+    );
     final floatingPost = ref.watch(floatingPostProvider);
 
     return Scaffold(
       body: Stack(
         children: [
-          // ✅ 使用 when() 处理异步状态
+          // ✅ 原有内容
           galleryStateAsync.when(
-            data: (state) {
-              debugPrint('📊 [UnifiedGalleryScreen] Building with ${state.posts.length} posts');
-              return _buildGridView(state);
-            },
-            error: (e, st) {
-              debugPrint('❌ [UnifiedGalleryScreen] Error: $e');
-              debugPrint('❌ [UnifiedGalleryScreen] Stack: $st');
-              return Center(child: Text('Error: $e'));
-            },
+            data: (state) => _buildGridView(state),
+            error: (e, st) => Center(child: Text('Error: $e')),
             loading: () {
-              final oldState = ref.read(unifiedGalleryProvider(widget.sourceId)).asData?.value;
-              debugPrint('⏳ [UnifiedGalleryScreen] Loading... oldState: ${oldState != null ? 'EXISTS' : 'NULL'}');
+              final oldState = ref
+                  .read(unifiedGalleryProvider(widget.sourceId))
+                  .asData
+                  ?.value;
               return oldState != null
                   ? _buildGridView(oldState, isRefreshing: true)
                   : const Center(child: CircularProgressIndicator());
             },
           ),
 
-          // ✅ 悬浮预览层
+          // ✅ 悬浮预览层（覆盖在最上方）
           if (floatingPost != null) ...[
-            // ✅ 遮罩点击关闭
+            // 半透明遮罩
             GestureDetector(
               onTap: () => closeFloatingPreview(ref),
               child: Container(color: Colors.black87),
             ),
 
-            // ✅ 内容区
+            // 内容区
             Center(
-              child: FloatingPreviewContent(
+              child: FullscreenPreviewContent(
                 post: floatingPost,
                 onClose: () => closeFloatingPreview(ref),
               ),
@@ -192,68 +160,102 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
 
   Widget _buildGridView(GalleryState state, {bool isRefreshing = false}) {
     final crossAxisCount = ref.watch(crossAxisCountNotifierProvider);
-    final cardHeight = ref.watch(cardHeightProvider);
-    const crossAxisSpacing = 4.0;
-    const mainAxisSpacing = 4.0;
 
-    // ✅ 空列表检查
     if (state.posts.isEmpty && !isRefreshing) {
-      debugPrint('📭 [UnifiedGalleryScreen] No posts to display');
       return const Center(child: Text('No posts found.'));
     }
 
-    // ✅ 调试打印前10个帖子的关键信息
-    if (state.posts.isNotEmpty) {
-      debugPrint('📋 [UnifiedGalleryScreen] First 3 posts:');
-      for (int i = 0; i < min(3, state.posts.length); i++) {
-        final post = state.posts[i];
-        debugPrint('  [$i] id: ${post.id}, url: ${post.fullImageUrl}, source: ${post.source}');
-      }
-    }
+    return StableDragScrollbar(
+      controller: _scrollController,
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final cardWidth = (screenWidth - crossAxisSpacing * (crossAxisCount - 1)) / crossAxisCount;
-    final childAspectRatio = cardWidth / cardHeight;
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        debugPrint('🔄 [UnifiedGalleryScreen] Refresh triggered');
-        await ref.read(unifiedGalleryProvider(widget.sourceId).notifier).refresh();
-        debugPrint('✅ [UnifiedGalleryScreen] Refresh completed');
+      onDragStart: () {
+        if (mounted) setState(() => _isDragging = true);
       },
-      child: GridView.builder(
-        controller: _scrollController,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          childAspectRatio: childAspectRatio,
-          mainAxisSpacing: mainAxisSpacing,
-          crossAxisSpacing: crossAxisSpacing,
+      onDragEnd: () {
+        if (mounted) setState(() => _isDragging = false);
+        _onScroll(); // 在拖拽滚动条结束时额外调用
+      },
+      child: RefreshIndicator(
+        onRefresh: () => ref
+            .read(unifiedGalleryProvider(widget.sourceId).notifier)
+            .refresh(),
+        child: ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: MasonryGridView.builder(
+            key: _gridKey,
+            controller: _scrollController,
+            padding: const EdgeInsets.all(8.0),
+            gridDelegate: SliverSimpleGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+            ),
+            mainAxisSpacing: 4.0,
+            crossAxisSpacing: 4.0,
+            cacheExtent: MediaQuery.of(context).size.height * 2.5,
+            itemCount: state.hasMore
+                ? state.posts.length + 1
+                : state.posts.length,
+
+            itemBuilder: (context, index) {
+              debugPrint("[itemBuilder] itemBuilder正在构建:索引 $index");
+              if (index >= state.posts.length) {
+                debugPrint("[itemBuilder] 加载指示器索引: $index");
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              final post = state.posts[index];
+
+              // 1. 计算媒体部分本身的宽高比
+              final mediaAspectRatio = post.width / post.height;
+
+              // 2. 估算卡片的总宽高比
+              //    我们需要知道卡片的宽度来计算总高度
+              final crossAxisCount = ref.read(crossAxisCountNotifierProvider);
+              final screenWidth = MediaQuery.of(context).size.width;
+              const crossAxisSpacing = 4.0;
+              const padding = 8.0 * 2; // GridView 的 padding
+              final cardWidth =
+                  (screenWidth -
+                      padding -
+                      crossAxisSpacing * (crossAxisCount - 1)) /
+                  crossAxisCount;
+
+              // 媒体部分的高度
+              final mediaHeight = cardWidth / mediaAspectRatio;
+              // 卡片总高度
+              final totalCardHeight = mediaHeight + kCardFooterHeight;
+              // 卡片总宽高比
+              final totalAspectRatio = cardWidth / totalCardHeight;
+
+              // 3. AspectRatio 使用修正后的总宽高比
+              return AspectRatio(
+                key: ValueKey(post.id),
+                aspectRatio: totalAspectRatio,
+                child: Container(
+                  color: Theme.of(context).canvasColor,
+                  child: _isDragging
+                      ? Column(
+                          children: [
+                            // 拖拽时，显示图片，并让它占据应有的空间
+                            Expanded(
+                              child: ImageRenderer(
+                                imageUrl: post.previewImageUrl,
+                              ),
+                            ),
+                            // 在下方用一个 SizedBox 占住页脚的位置
+                            const SizedBox(height: kCardFooterHeight),
+                          ],
+                        )
+                      : UnifiedMediaCard(post: post), // 停止时，显示完整的卡片
+                ),
+              );
+            },
+          ),
         ),
-        cacheExtent: MediaQuery.of(context).size.height * 2.5,
-        itemCount: state.hasMore ? state.posts.length + 1 : state.posts.length,
-        itemBuilder: (context, index) {
-          // ✅ 加载更多指示器
-          if (index == state.posts.length) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(),
-              ),
-            );
-          }
-
-          final post = state.posts[index];
-          
-          // ✅ **关键**：验证单个帖子数据完整性
-          if (post.id == null || post.fullImageUrl == null) {
-            debugPrint('🚫 [UnifiedGalleryScreen] Invalid post at index $index: id=${post.id}, url=${post.fullImageUrl}');
-            return const SizedBox.shrink(); // 返回空组件避免崩溃
-          }
-
-          return RepaintBoundary(
-            child: UnifiedMediaCard(post: post),
-          );
-        },
       ),
     );
   }

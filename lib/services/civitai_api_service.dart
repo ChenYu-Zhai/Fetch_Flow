@@ -5,29 +5,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 
-// Move the Dio Provider here as it is closely related to the API Service.
-// 将 Dio Provider 移到这里，因为它与 API Service 紧密相关。
 final dioProvider = Provider<Dio>((ref) {
   return Dio(BaseOptions(baseUrl: 'https://civitai.com/api/v1'));
 });
 
-// Create a Provider for the ApiService.
-// 创建 ApiService 的 Provider。
 final civitaiApiServiceProvider = Provider<CivitaiApiService>((ref) {
   final dio = ref.watch(dioProvider);
   return CivitaiApiService(dio, ref);
 });
 
-// Define the ApiService class.
-// 定义 ApiService 类。
+
 class CivitaiApiService {
   final Dio _dio;
   final Ref _ref;
 
   CivitaiApiService(this._dio, this._ref);
 
-  /// Fetches image data from the Civitai API.
-  /// 从 Civitai API 获取图片数据。
   Future<Map<String, dynamic>> fetchImages({
     String? cursor,
     required Map<String, dynamic> filters,

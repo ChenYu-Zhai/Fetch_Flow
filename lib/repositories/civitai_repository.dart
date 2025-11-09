@@ -35,12 +35,16 @@ class CivitaiRepositoryAdapter implements BaseRepository {
     Object? paginationToken,
     Map<String, dynamic>? filters,
   }) async {
-    debugPrint('[CivitaiRepository] Getting posts... Token: $paginationToken, Filters: $filters');
+    debugPrint(
+      '[CivitaiRepository] Getting posts... Token: $paginationToken, Filters: $filters',
+    );
     final rawDataMap = await _apiService.fetchImages(
       cursor: paginationToken as String?,
       filters: filters ?? {},
     );
-    debugPrint('[CivitaiRepository] Fetched raw data. Items: ${(rawDataMap['items'] as List).length}');
+    debugPrint(
+      '[CivitaiRepository] Fetched raw data. Items: ${(rawDataMap['items'] as List).length}',
+    );
 
     // Move the parsing of the Map to the background.
     // We now pass the raw Map and the `_parseCivitaiImages` function.
@@ -54,7 +58,9 @@ class CivitaiRepositoryAdapter implements BaseRepository {
 
     final unifiedPosts = civitaiImages.map(_transform).toList();
     final nextCursor = rawDataMap['metadata']?['nextCursor'].toString();
-    debugPrint('[CivitaiRepository] Transformed to ${unifiedPosts.length} unified posts. Next cursor: $nextCursor');
+    debugPrint(
+      '[CivitaiRepository] Transformed to ${unifiedPosts.length} unified posts. Next cursor: $nextCursor',
+    );
 
     return (unifiedPosts, nextCursor);
   }
@@ -62,6 +68,23 @@ class CivitaiRepositoryAdapter implements BaseRepository {
   // The transformation function remains unchanged; it is responsible for converting a specific model to a unified model.
   // 转换函数保持不变，它负责将一个具体模型转换为统一模型。
   UnifiedPostModel _transform(CivitaiImageModel image) {
+    List<String> extractedTags = [];
+    final String? prompt = image.meta?.prompt;
+    if (prompt != null && prompt.isNotEmpty) {
+      // 简单的解析逻辑：按逗号分割，并清理每个标签
+      extractedTags = prompt
+          .split(',')
+          .map((tag) => tag.trim()) // 去除首尾空格
+          // 移除 AI 绘图中的权重符号和括号
+          .map((tag) => tag.replaceAll(RegExp(r'[\(\)\[\]\{\}:<>]'), ''))
+          .where((tag) => tag.isNotEmpty) // 过滤掉空标签
+          .toList();
+    }
+    // 2. 如果从 prompt 中没有提取到标签，则使用 meta.tags 作为备用
+    if (extractedTags.isEmpty) {
+      extractedTags = image.meta?.tags ?? [];
+    }
+
     final pureJsonData = jsonDecode(jsonEncode(image.toJson()));
     return UnifiedPostModel(
       id: 'civitai-${image.id}',
@@ -71,7 +94,7 @@ class CivitaiRepositoryAdapter implements BaseRepository {
       width: image.width,
       height: image.height,
       mediaType: image.type,
-      tags: image.meta?.tags ?? [],
+      tags: extractedTags, 
       author: image.username,
       score: image.stats?.likeCount ?? 0,
       detailsUrl: 'https://civitai.com/images/${image.id}',

@@ -9,10 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:featch_flow/models/civitai_filters.dart';
 import 'package:featch_flow/widgets/civitai_filter_panel.dart';
 
-// Define the data sources we have enabled.
-// In the future, this could be dynamically fetched from a configuration service.
-// 定义我们启用的数据源。
-// 未来这里可以从配置服务中动态获取。
 const List<String> enabledSources = ['civitai', 'rule34'];
 
 class MainScreen extends ConsumerStatefulWidget {

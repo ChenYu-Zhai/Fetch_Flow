@@ -28,7 +28,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _rule34TokenController = TextEditingController(text: initialAuthState.rule34Token);
     _rule34UserIdController = TextEditingController(text: initialAuthState.rule34UserId);
     
-    // ✅ 初始化所有 Slider 值为持久化值
+    // 初始化所有 Slider 值为持久化值
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(sliderValueProvider.notifier).state = 
         ref.read(prefetchThresholdNotifierProvider);

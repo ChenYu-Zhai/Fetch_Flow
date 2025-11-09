@@ -7,8 +7,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'downloader.dart';
 
-/// Concrete implementation of the Downloader for mobile and desktop platforms.
-/// 移动和桌面平台的下载器具体实现。
 class MobileDesktopDownloader implements Downloader {
   final Dio _dio = Dio();
 

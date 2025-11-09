@@ -65,6 +65,8 @@ dependencies:
   media_kit_libs_video: ^1.0.7
   file_picker: ^10.3.3
   fluttertoast: ^9.0.0
+  zoom_pinch_overlay: ^1.4.3
+  infinite_scroll_pagination: ^5.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
