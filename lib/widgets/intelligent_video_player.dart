@@ -102,7 +102,6 @@ class _IntelligentVideoPlayerState
   Widget build(BuildContext context) {
     if (_isDisposed) return const SizedBox();
 
-    // ⭐ CRITICAL: Use ref.watch() to keep autoDispose provider alive
     final controller = ref.watch(videoControllerProvider(widget.videoUrl));
 
     return VisibilityDetector(

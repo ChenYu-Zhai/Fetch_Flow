@@ -29,28 +29,21 @@ class StaggeredBuildWrapper<T> extends StatefulWidget {
 }
 
 class _StaggeredBuildWrapperState<T> extends State<StaggeredBuildWrapper<T>> {
-  // 已经构建好的 Widget 列表
   final List<Widget> _builtItems = [];
-  // 待处理的任务队列
   final List<T> _pendingItems = [];
   
-  // 用于周期性调度的 Timer
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    // 初始时，将所有 item 加入待处理队列
     _pendingItems.addAll(widget.items);
-    // 启动构建调度器
     _startScheduler();
   }
 
   @override
   void didUpdateWidget(covariant StaggeredBuildWrapper<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 当外部传入的 item 列表变化时（例如，刷新或加载了新数据）
-    // 我们需要重置状态
     if (widget.items != oldWidget.items) {
       _timer?.cancel();
       _builtItems.clear();

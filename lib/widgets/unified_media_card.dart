@@ -6,7 +6,7 @@ import 'package:featch_flow/models/unified_post_model.dart';
 import 'package:featch_flow/providers/floating_preview_provider.dart';
 import 'package:featch_flow/providers/settings_provider.dart';
 import 'package:featch_flow/widgets/download_button.dart';
-import 'package:featch_flow/widgets/intelligent_video_player.dart'; // ✅ 【重要】导入我们新的 Widget
+import 'package:featch_flow/widgets/intelligent_video_player.dart';
 import 'package:featch_flow/widgets/show_tag_button.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -15,70 +15,62 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:featch_flow/providers/cache_manager_provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-
-// ✅ 整个 State 都变得非常简单
-class UnifiedMediaCard extends ConsumerWidget { // ⬅️ 可以考虑转为 ConsumerWidget，因为大部分 state 没了
+class UnifiedMediaCard extends ConsumerStatefulWidget {
   final UnifiedPostModel post;
   const UnifiedMediaCard({super.key, required this.post});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UnifiedMediaCard> createState() => _UnifiedMediaCardState();
+}
+
+class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
     final cardHeight = ref.watch(cardHeightProvider);
-    final isHovering = ValueNotifier<bool>(false); // 可以在 build 方法内创建
+    final isHovering = ValueNotifier<bool>(false);
 
-    // Badge 和 Hover Text 的逻辑可以移到这里
-    final String badgeText = '${post.mediaType.toString().split('.').last.toUpperCase()} • ${post.width}×${post.height}';
-    final String hoverInfoText = post.tags?.take(5).join(', ') ?? '';
+    final String badgeText =
+        '${widget.post.mediaType.toString().split('.').last.toUpperCase()} • ${widget.post.width}×${widget.post.height}';
+    final String hoverInfoText = widget.post.tags?.take(5).join(', ') ?? '';
 
-    return SizedBox(
-      height: cardHeight,
-      child: Container(
-        margin: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          color: Theme.of(context).canvasColor,
-          border: Border.all(color: Colors.grey.withAlpha(25), width: 0.5),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: _MediaArea(
-                post: post,
-                isHovering: isHovering,
-                onTap: () => openFloatingPreview(ref, post),
-                // ❌ 不再需要 onVisibilityChanged 回调
-                // onVisibilityChanged: _handleVisibilityChange, 
-                badgeText: badgeText,
-                hoverInfoText: hoverInfoText,
-                child: Hero(
-                  tag: post.id,
-                  // ✅ 核心修改在这里
-                  child: Center(child: _buildMediaContent()),
-                ),
+    return RepaintBoundary(
+      child: Column(
+        children: [
+          Expanded(
+            child: _MediaArea(
+              post: widget.post,
+              isHovering: isHovering,
+              onTap: () => openFloatingPreview(ref, widget.post),
+              badgeText: badgeText,
+              hoverInfoText: hoverInfoText,
+              child: Hero(
+                tag: widget.post.id,
+                child: Center(child: _buildMediaContent()),
               ),
             ),
-            SizedBox(
-              height: 44,
-              child: _buildButtonBar(),
-            ),
-          ],
-        ),
+          ),
+          SizedBox(height: 44, child: _buildButtonBar()),
+        ],
       ),
     );
   }
 
-  // ✅ 媒体构建逻辑变得极其简单
   Widget _buildMediaContent() {
-    if (post.mediaType == MediaType.video && post.fullImageUrl.isNotEmpty) {
-      // 如果是视频，直接使用 IntelligentVideoPlayer
+    if (widget.post.mediaType == MediaType.video &&
+        widget.post.fullImageUrl.isNotEmpty) {
       return IntelligentVideoPlayer(
-        videoUrl: post.fullImageUrl, // ⬅️ 使用 videoUrl
-        previewImageUrl: post.previewImageUrl,
+        videoUrl: widget.post.fullImageUrl,
+        previewImageUrl: widget.post.previewImageUrl,
       );
     }
-
-    // 否则，使用 ImageRenderer
     return ImageRenderer(
-      imageUrl: post.previewImageUrl,
+      imageUrl: widget.post.previewImageUrl,
       fit: BoxFit.contain,
       alignment: Alignment.center,
     );
@@ -88,16 +80,13 @@ class UnifiedMediaCard extends ConsumerWidget { // ⬅️ 可以考虑转为 Con
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        ShowTagButton(post: post),
-        DownloadButton(post: post),
+        ShowTagButton(post: widget.post),
+        DownloadButton(post: widget.post),
       ],
     );
   }
 }
 
-
-// ✅ _MediaArea Widget
-// 移除了不再需要的 onVisibilityChanged 参数
 class _MediaArea extends StatelessWidget {
   final UnifiedPostModel post;
   final ValueNotifier<bool> isHovering;
@@ -145,7 +134,10 @@ class _MediaArea extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
-                        colors: [ Colors.black.withOpacity(0.7), Colors.transparent ],
+                        colors: [
+                          Colors.black.withOpacity(0.7),
+                          Colors.transparent,
+                        ],
                         stops: const [0.0, 0.7],
                       ),
                     ),
@@ -160,13 +152,20 @@ class _MediaArea extends StatelessWidget {
       ),
     );
   }
-  
+
   // _buildBadge 和 _buildHoverText 方法保持不变
   Widget _buildBadge(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(color: Colors.black.withOpacity(0.7)),
-      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -183,7 +182,12 @@ class _MediaArea extends StatelessWidget {
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 100),
             opacity: isHovering ? 1.0 : 0.0,
-            child: Text(text, maxLines: 99, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 12)),
+            child: Text(
+              text,
+              maxLines: 99,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
           ),
         );
       },
@@ -195,7 +199,8 @@ class ImageRenderer extends ConsumerWidget {
   final String imageUrl;
   final Alignment alignment;
   final BoxFit fit; // ✅ 新增
-  const ImageRenderer({super.key, 
+  const ImageRenderer({
+    super.key,
     required this.imageUrl,
     this.alignment = Alignment.center,
     this.fit = BoxFit.contain,
@@ -203,6 +208,7 @@ class ImageRenderer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    debugPrint("[ImageRenderer] 构建图片: $imageUrl,");
     final cacheManager = ref.watch(customCacheManagerProvider);
     return CachedNetworkImage(
       cacheManager: cacheManager,
@@ -220,7 +226,6 @@ class ImageRenderer extends ConsumerWidget {
   }
 }
 
-// ✅ FIXED: 修正所有问题
 class TagDetailsDialog extends StatelessWidget {
   final UnifiedPostModel post;
   const TagDetailsDialog({super.key, required this.post});
@@ -302,7 +307,7 @@ class TagDetailsDialog extends StatelessWidget {
                   runSpacing: 4,
                   children: items
                       .map((item) => _buildTagChip(context, item))
-                      .toList(), // ✅ FIXED
+                      .toList(),
                 ),
               ),
             ),
@@ -313,7 +318,6 @@ class TagDetailsDialog extends StatelessWidget {
     );
   }
 
-  // ✅ FIXED: 定义为实例方法
   Widget _buildInfoChip(BuildContext context, String label, String value) {
     return Chip(
       label: RichText(
@@ -336,7 +340,6 @@ class TagDetailsDialog extends StatelessWidget {
     );
   }
 
-  // ✅ FIXED: 定义为实例方法
   Widget _buildTagChip(BuildContext context, String item) {
     return ActionChip(
       label: Text(item, style: const TextStyle(fontSize: 13)),
@@ -367,7 +370,6 @@ class TagDetailsDialog extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // --- “复制全部”按钮：使用 TextButton，但自定义样式 ---
           TextButton(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: items.join(', ')));
@@ -377,18 +379,16 @@ class TagDetailsDialog extends StatelessWidget {
               ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
             },
             style: TextButton.styleFrom(
-              // 2. 设置前景色（文本和图标颜色）
-              // 使用一个比默认更柔和的颜色，或者使用强调色
+
               foregroundColor: theme.textTheme.bodyLarge?.color?.withOpacity(
                 0.8,
               ),
 
-              // 3. 设置按钮的形状，增加圆角
+
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
               ),
 
-              // 4. 增加内边距，让按钮看起来更大、更易于点击
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
             child: const Text('复制全部'),
@@ -396,23 +396,14 @@ class TagDetailsDialog extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          // --- “关闭”按钮：使用 ElevatedButton，并应用主题色 ---
+
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-              // 5. 设置背景色
-              // 使用 colorScheme.primary，使其与应用的主色调保持一致
               backgroundColor: theme.colorScheme.primary,
-
-              // 6. 设置前景色（文本颜色）
-              // primary 颜色上的文本应该是亮色
               foregroundColor: theme.colorScheme.onPrimary,
-
-              // 7. 设置阴影颜色和大小
               elevation: 2,
               shadowColor: Colors.black.withOpacity(0.2),
-
-              // 8. 同样设置形状和内边距
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
               ),

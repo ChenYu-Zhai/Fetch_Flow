@@ -6,6 +6,7 @@ import 'package:featch_flow/models/unified_post_model.dart';
 import 'package:featch_flow/providers/video_controller_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:media_kit/media_kit.dart';
@@ -87,76 +88,61 @@ class _FullscreenPreviewContentState
   Widget build(BuildContext context) {
     if (_isDisposed) return const SizedBox();
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Positioned.fill(child: _buildMedia()),
-          Positioned(
-            top: 40,
-            right: 16,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 30),
-              onPressed: widget.onClose,
-            ),
+    // 定义快捷键映射表
+    final shortcuts = <ShortcutActivator, VoidCallback>{
+      const SingleActivator(LogicalKeyboardKey.escape): widget.onClose,
+    };
+
+    return CallbackShortcuts(
+      bindings: shortcuts,
+      child: FocusScope(
+        autofocus: true,
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              Positioned.fill(child: _buildMedia()),
+              Positioned(
+                top: 40,
+                right: 16,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: widget.onClose,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildMedia() {
-    final controller = ref.watch(
-      videoControllerProvider(widget.post.fullImageUrl),
-    );
-    if (widget.post.mediaType != MediaType.video) {
-      return InteractiveViewer(
-        panEnabled: true,
-        minScale: 0.5,
-        maxScale: 4.0,
-        child: CachedNetworkImage(
-          imageUrl: widget.post.fullImageUrl,
-          fit: BoxFit.contain,
-          placeholder: (_, __) =>
-              const Center(child: CircularProgressIndicator()),
-          errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
-        ),
-      );
-    }
-    // 视频部分
-    else if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            '视频加载失败:\n$_error',
-            style: const TextStyle(color: Colors.white),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    } else if (!_isDisposed && _isLoadingVideo && controller != null) {
-      _initializePlayer();
-    } else if (_isLoadingVideo || controller == null) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          CachedNetworkImage(
-            imageUrl: widget.post.previewImageUrl,
-            fit: BoxFit.contain,
-          ),
-          const Center(child: CircularProgressIndicator(color: Colors.white)),
-        ],
+    final mediaType = widget.post.mediaType;
+
+    Widget content;
+    if (mediaType == MediaType.video) {
+      content = Video(controller: controller, fit: BoxFit.contain);
+    } else {
+      content = CachedNetworkImage(
+        imageUrl: widget.post.fullImageUrl,
+        fit: BoxFit.contain,
+        placeholder: (_, __) =>
+            const Center(child: CircularProgressIndicator()),
+        errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
       );
     }
 
-    return InteractiveViewer(
-      panEnabled: true,
-      scaleEnabled: true,
-      minScale: 1.0,
-      maxScale: 4.0,
-      boundaryMargin: const EdgeInsets.all(100),
-      child: Video(controller: controller, fit: BoxFit.contain),
-    );
+    if (mediaType != MediaType.video) {
+      return InteractiveViewer(
+        panEnabled: true,
+        scaleFactor: 800,
+        minScale: 0.5,
+        maxScale: 12.0,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

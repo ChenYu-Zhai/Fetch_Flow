@@ -31,11 +31,9 @@ class ShowTagButton extends ConsumerWidget {
     );
   }
 
-  /* 一次性逻辑：loading -> 弹窗 -> 完事 */
   Future<void> _handleTap(BuildContext context, WidgetRef ref) async {
     ref.read(_tagLoadingProvider(post.id).notifier).state = true;
 
-    // 模拟“拿标签”耗时（其实标签已经在 post.tags 里了）
     await Future.delayed(const Duration(milliseconds: 300));
 
     if (!context.mounted) return;
