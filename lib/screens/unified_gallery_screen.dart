@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:featch_flow/models/unified_post_model.dart';
 import 'package:featch_flow/providers/floating_preview_provider.dart';
 import 'package:featch_flow/providers/unified_gallery_provider.dart';
@@ -32,7 +33,7 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
   Timer? _fetchThrottleTimer;
   Timer? _preloadThrottleTimer;
   int _lastPreloadIndex = 0;
-  bool _isDragging = false; 
+  bool _isDragging = false;
   late final PageStorageKey _gridKey;
   @override
   void initState() {
@@ -76,27 +77,76 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
   void _scheduleMediaPreload() {
     if (_isDragging) return;
     if (_preloadThrottleTimer?.isActive ?? false) return;
+
     final delay = ref.watch(preloadDelayProvider);
     _preloadThrottleTimer = Timer(Duration(milliseconds: delay), () async {
       final state = ref
           .read(unifiedGalleryProvider(widget.sourceId))
           .asData
           ?.value;
-      if (state == null) return;
+      if (state == null || state.posts.isEmpty) return;
 
-      final cardHeight = ref.watch(cardHeightProvider);
-      final firstIndex =
-          (_scrollController.position.pixels / cardHeight).floor() * 2;
-      if (firstIndex < _lastPreloadIndex) return;
+      final scrollPosition = _scrollController.position;
+      final screenHeight = MediaQuery.of(context).size.height;
 
-      final start = max(0, firstIndex - 10);
-      final end = min(state.posts.length, firstIndex + 10);
-      _lastPreloadIndex = firstIndex;
+      // 计算当前屏幕上下各延伸出一个屏幕的范围用于预加载
+      final preloadStartPixel = scrollPosition.pixels - screenHeight;
+      final preloadEndPixel = scrollPosition.pixels + screenHeight * 2;
 
-      await ref
-          .read(mediaPreloadServiceProvider)
-          .preloadPosts(state.posts.sublist(start, end));
+      final visibleStartIndex = _findItemIndexAtPixel(
+        preloadStartPixel,
+        state.posts,
+      );
+      final visibleEndIndex = _findItemIndexAtPixel(
+        preloadEndPixel,
+        state.posts,
+      );
+
+      final startIndex = math.max(0, visibleStartIndex - 5);
+      final endIndex = math.min(state.posts.length, visibleEndIndex + 5);
+
+      if (startIndex >= endIndex || startIndex < _lastPreloadIndex) return;
+
+      _lastPreloadIndex = startIndex;
+
+      final preloadPosts = state.posts.sublist(startIndex, endIndex);
+
+      debugPrint('[Preload] Start=$startIndex, End=$endIndex');
+      await ref.read(mediaPreloadServiceProvider).preloadPosts(preloadPosts);
     });
+  }
+
+  int _findItemIndexAtPixel(double targetPixel, List<UnifiedPostModel> posts) {
+    double accumulatedHeight = 0.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = ref.read(crossAxisCountNotifierProvider);
+
+    // 瀑布流横向间距、padding 与 item 宽度计算（同你的 itemBuilder 一致）
+    const crossAxisSpacing = 4.0;
+    const padding = 8.0 * 2;
+    final cardWidth =
+        (screenWidth - padding - crossAxisSpacing * (crossAxisCount - 1)) /
+        crossAxisCount;
+
+    for (int i = 0; i < posts.length; i++) {
+      final post = posts[i];
+
+      if (post.width == 0 || post.height == 0) {
+        accumulatedHeight += cardWidth; // fallback to minimum estimate
+        continue;
+      }
+
+      final mediaHeight = cardWidth / (post.width / post.height);
+      final totalCardHeight = mediaHeight + kCardFooterHeight;
+
+      accumulatedHeight += totalCardHeight + 4.0; // + mainAxisSpacing
+
+      if (accumulatedHeight >= targetPixel) {
+        return i;
+      }
+    }
+
+    return posts.length;
   }
 
   void _fetchNextPageThrottled() {
