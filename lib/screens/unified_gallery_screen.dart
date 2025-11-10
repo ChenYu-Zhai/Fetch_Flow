@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:featch_flow/models/unified_post_model.dart';
 import 'package:featch_flow/providers/floating_preview_provider.dart';
 import 'package:featch_flow/providers/unified_gallery_provider.dart';
+import 'package:featch_flow/utils/image_renderer.dart';
 import 'package:featch_flow/widgets/floating_preview_content.dart';
 import 'package:featch_flow/widgets/placeholder_card.dart';
 import 'package:featch_flow/widgets/stable_drag_scrollbar.dart';
@@ -29,11 +30,15 @@ class UnifiedGalleryScreen extends ConsumerStatefulWidget {
 
 class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
   final ScrollController _scrollController = ScrollController();
+
   bool _isFetching = false;
   Timer? _fetchThrottleTimer;
   Timer? _preloadThrottleTimer;
   int _lastPreloadIndex = 0;
-  bool _isDragging = false;
+  // bool _isDragging = false;
+  final ValueNotifier<bool> _isDraggingNotifier = ValueNotifier<bool>(
+    false,
+  ); // <<< 替换为这行
   late final PageStorageKey _gridKey;
   @override
   void initState() {
@@ -47,6 +52,7 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
 
   @override
   void dispose() {
+    _isDraggingNotifier.dispose();
     _scrollController.dispose();
     _fetchThrottleTimer?.cancel();
     _preloadThrottleTimer?.cancel();
@@ -58,7 +64,7 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
 
   Timer? _scrollThrottleTimer;
   void _onScroll() {
-    if (_isDragging) return;
+    if (_isDraggingNotifier.value) return;
     _scrollThrottleTimer?.cancel();
     _scrollThrottleTimer = Timer(
       Duration(milliseconds: ref.watch(preloadDelayProvider)),
@@ -69,51 +75,9 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
           _fetchNextPageThrottled();
         }
         debugPrint("[_onScroll] 触发预加载");
-        _scheduleMediaPreload();
+        // _scheduleMediaPreload();
       },
     );
-  }
-
-  void _scheduleMediaPreload() {
-    if (_isDragging) return;
-    if (_preloadThrottleTimer?.isActive ?? false) return;
-
-    final delay = ref.watch(preloadDelayProvider);
-    _preloadThrottleTimer = Timer(Duration(milliseconds: delay), () async {
-      final state = ref
-          .read(unifiedGalleryProvider(widget.sourceId))
-          .asData
-          ?.value;
-      if (state == null || state.posts.isEmpty) return;
-
-      final scrollPosition = _scrollController.position;
-      final screenHeight = MediaQuery.of(context).size.height;
-
-      // 计算当前屏幕上下各延伸出一个屏幕的范围用于预加载
-      final preloadStartPixel = scrollPosition.pixels - screenHeight;
-      final preloadEndPixel = scrollPosition.pixels + screenHeight * 2;
-
-      final visibleStartIndex = _findItemIndexAtPixel(
-        preloadStartPixel,
-        state.posts,
-      );
-      final visibleEndIndex = _findItemIndexAtPixel(
-        preloadEndPixel,
-        state.posts,
-      );
-
-      final startIndex = math.max(0, visibleStartIndex - 5);
-      final endIndex = math.min(state.posts.length, visibleEndIndex + 5);
-
-      if (startIndex >= endIndex || startIndex < _lastPreloadIndex) return;
-
-      _lastPreloadIndex = startIndex;
-
-      final preloadPosts = state.posts.sublist(startIndex, endIndex);
-
-      debugPrint('[Preload] Start=$startIndex, End=$endIndex');
-      await ref.read(mediaPreloadServiceProvider).preloadPosts(preloadPosts);
-    });
   }
 
   int _findItemIndexAtPixel(double targetPixel, List<UnifiedPostModel> posts) {
@@ -167,12 +131,10 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
     final galleryStateAsync = ref.watch(
       unifiedGalleryProvider(widget.sourceId),
     );
-    final floatingPost = ref.watch(floatingPostProvider);
 
     return Scaffold(
       body: Stack(
         children: [
-          // ✅ 原有内容
           galleryStateAsync.when(
             data: (state) => _buildGridView(state),
             error: (e, st) => Center(child: Text('Error: $e')),
@@ -186,23 +148,7 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
                   : const Center(child: CircularProgressIndicator());
             },
           ),
-
-          // ✅ 悬浮预览层（覆盖在最上方）
-          if (floatingPost != null) ...[
-            // 半透明遮罩
-            GestureDetector(
-              onTap: () => closeFloatingPreview(ref),
-              child: Container(color: Colors.black87),
-            ),
-
-            // 内容区
-            Center(
-              child: FullscreenPreviewContent(
-                post: floatingPost,
-                onClose: () => closeFloatingPreview(ref),
-              ),
-            ),
-          ],
+          const _FloatingPreviewOverlay(),
         ],
       ),
     );
@@ -219,10 +165,10 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
       controller: _scrollController,
 
       onDragStart: () {
-        if (mounted) setState(() => _isDragging = true);
+        _isDraggingNotifier.value = true;
       },
       onDragEnd: () {
-        if (mounted) setState(() => _isDragging = false);
+        _isDraggingNotifier.value = false;
         _onScroll(); // 在拖拽滚动条结束时额外调用
       },
       child: RefreshIndicator(
@@ -244,7 +190,6 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
             itemCount: state.hasMore
                 ? state.posts.length + 1
                 : state.posts.length,
-
             itemBuilder: (context, index) {
               debugPrint("[itemBuilder] itemBuilder正在构建:索引 $index");
               if (index >= state.posts.length) {
@@ -281,29 +226,42 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
               // 卡片总宽高比
               final totalAspectRatio = cardWidth / totalCardHeight;
 
-              // 3. AspectRatio 使用修正后的总宽高比
               return AspectRatio(
                 key: ValueKey(post.id),
                 aspectRatio: totalAspectRatio,
-                child: Container(
-                  color: Theme.of(context).canvasColor,
-                  child: _isDragging
-                      ? Column(
-                          children: [
-                            // 拖拽时，显示图片，并让它占据应有的空间
-                            Expanded(
-                              child: ImageRenderer(
-                                imageUrl: post.previewImageUrl,
-                              ),
-                            ),
-                            // 在下方用一个 SizedBox 占住页脚的位置
-                            const SizedBox(height: kCardFooterHeight),
-                          ],
-                        )
-                      : UnifiedMediaCard(post: post), // 停止时，显示完整的卡片
+                child: UnifiedMediaCard(
+                  post: post,
+                  isDraggingNotifier: _isDraggingNotifier, 
                 ),
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingPreviewOverlay extends ConsumerWidget {
+  const _FloatingPreviewOverlay({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 【注意】在这里监听 floatingPostProvider，而不是在父 Widget 中
+    final floatingPost = ref.watch(floatingPostProvider);
+
+    if (floatingPost == null) {
+      return const SizedBox.shrink(); // 没有浮动预览时，不显示任何东西
+    }
+
+    return Container(
+      color: const Color.fromARGB(128, 0, 0, 0),
+      child: Center(
+        child: GestureDetector(
+          onTap: () {}, // 阻止点击穿透到下面的画廊
+          child: FullscreenPreviewContent(
+            post: floatingPost,
+            onClose: () => closeFloatingPreview(ref),
           ),
         ),
       ),

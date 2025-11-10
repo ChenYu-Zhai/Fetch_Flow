@@ -11,7 +11,7 @@ import 'package:media_kit/media_kit.dart';
 
 void main() async {
   debugPrint('[main] App starting...');
-  debugRepaintRainbowEnabled = true;
+  //debugRepaintRainbowEnabled = true;
   final prefs = await SharedPreferences.getInstance();
   WidgetsFlutterBinding.ensureInitialized();
   // Initialize MediaKit for video playback capabilities.

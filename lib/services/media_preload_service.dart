@@ -9,8 +9,6 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../models/unified_post_model.dart';
-import '../providers/video_controller_provider.dart';
-import 'dart:developer' as developer;
 
 final mediaPreloadServiceProvider = Provider<MediaPreloadService>((ref) {
   final service = MediaPreloadService(ref);

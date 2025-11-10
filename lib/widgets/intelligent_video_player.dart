@@ -1,8 +1,8 @@
 // lib/widgets/intelligent_video_player.dart
 
 import 'package:featch_flow/config/network_config.dart';
+import 'package:featch_flow/utils/image_renderer.dart';
 
-import 'package:featch_flow/widgets/unified_media_card.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
