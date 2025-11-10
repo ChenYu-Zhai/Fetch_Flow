@@ -15,12 +15,12 @@ const double kCardFooterHeight = 44.0;
 
 class UnifiedMediaCard extends ConsumerStatefulWidget {
   final UnifiedPostModel post;
-  final ValueNotifier<bool> isDraggingNotifier; // <<< 1. 添加新参数
+  final ValueNotifier<bool> isDraggingNotifier;
 
   const UnifiedMediaCard({
     super.key,
     required this.post,
-    required this.isDraggingNotifier, // <<< 2. 提供默认值
+    required this.isDraggingNotifier,
   });
 
   @override
@@ -32,62 +32,67 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard>
   @override
   bool get wantKeepAlive => true;
 
+  // 【关键】状态上移到 State，避免重建时丢失
+  final _isHovering = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _isHovering.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    // 使用 ValueListenableBuilder 来监听状态变化
+    // 【关键】1. 预先构建稳定且昂贵的媒体 Widget
+    final stableMediaHero = Hero(
+      tag: widget.post.id,
+      child: Center(child: _buildMediaContent()),
+    );
+
+    // 2. 覆盖层需要的数据（字符串计算非常轻量）
+    final badgeText =
+        '${widget.post.mediaType.toString().split('.').last.toUpperCase()} • ${widget.post.width}×${widget.post.height}';
+    final hoverInfoText = widget.post.tags?.take(5).join(', ') ?? '';
+
     return ValueListenableBuilder<bool>(
       valueListenable: widget.isDraggingNotifier,
-      builder: (context, isDragging, child) {
-
+      builder: (context, isDragging, __) {
         return Container(
           color: Theme.of(context).canvasColor,
-          child: isDragging ? _buildFastScrollView() : _buildFullCardView(),
-        );
-      },
-    );
-  }
+          child: RepaintBoundary(
+            // RepaintBoundary 隔离绘制，防止父组件动画导致重绘
+            child: Column(
+              children: [
+                Expanded(
+                  // 【核心】使用 Stack 层叠，而非切换树
+                  child: Stack(
+                    children: [
+                      // Layer 1: 稳定媒体层（永不销毁）
+                      Positioned.fill(child: stableMediaHero),
 
-  /// 快速滚动时的简化版UI
-  Widget _buildFastScrollView() {
-    return Column(
-      children: [
-        // 只显示媒体内容
-        Expanded(child: _buildMediaContent()),
-        // 用一个占位符保持总高度一致，防止布局跳动
-        const SizedBox(height: kCardFooterHeight),
-      ],
-    );
-  }
-
-  /// 正常状态下的完整卡片UI
-  Widget _buildFullCardView() {
-    final isHovering = ValueNotifier<bool>(false);
-
-    final String badgeText =
-        '${widget.post.mediaType.toString().split('.').last.toUpperCase()} • ${widget.post.width}×${widget.post.height}';
-    final String hoverInfoText = widget.post.tags?.take(5).join(', ') ?? '';
-
-    return RepaintBoundary(
-      child: Column(
-        children: [
-          Expanded(
-            child: _MediaArea(
-              post: widget.post,
-              isHovering: isHovering,
-              onTap: () => openFloatingPreview(ref, widget.post),
-              badgeText: badgeText,
-              hoverInfoText: hoverInfoText,
-              child: Hero(
-                tag: widget.post.id,
-                child: Center(child: _buildMediaContent()),
-              ),
+                      // Layer 2: 交互覆盖层（仅淡入淡出）
+                      _MediaOverlay(
+                        post: widget.post,
+                        isVisible: !isDragging,
+                        isHovering: _isHovering,
+                        onTap: () => openFloatingPreview(ref, widget.post),
+                        badgeText: badgeText,
+                        hoverInfoText: hoverInfoText,
+                      ),
+                    ],
+                  ),
+                ),
+                _AnimatedFooter(
+                  isVisible: !isDragging,
+                  child: _buildButtonBar(),
+                ),
+              ],
             ),
           ),
-          SizedBox(height: kCardFooterHeight, child: _buildButtonBar()),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -102,11 +107,7 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard>
     return VisibilityDetector(
       key: ValueKey(widget.post.id),
       onVisibilityChanged: (info) {
-        if (info.visibleFraction > 0.5) {
-          // 视口内 ≥ 50% 显示，提升权重
-        } else {
-          // 减弱或延迟
-        }
+        // 你的逻辑
       },
       child: ImageRenderer(
         imageUrl: widget.post.previewImageUrl,
@@ -127,70 +128,82 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard>
   }
 }
 
-class _MediaArea extends StatelessWidget {
+/// 【核心新组件】轻量级交互覆盖层，仅包含 UI 效果
+class _MediaOverlay extends StatelessWidget {
   final UnifiedPostModel post;
+  final bool isVisible;
   final ValueNotifier<bool> isHovering;
   final VoidCallback onTap;
-  // ❌ final Function(VisibilityInfo) onVisibilityChanged;
   final String badgeText;
   final String hoverInfoText;
-  final Widget child;
 
-  const _MediaArea({
+  const _MediaOverlay({
     required this.post,
+    required this.isVisible,
     required this.isHovering,
     required this.onTap,
-    // required this.onVisibilityChanged,
     required this.badgeText,
     required this.hoverInfoText,
-    required this.child,
   });
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => isHovering.value = true,
-      onExit: (_) => isHovering.value = false,
-      child: InkWell(
-        onTap: onTap,
-        highlightColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        child: Stack(
-          fit: StackFit.expand, // 确保 Stack 填满
-          children: [
-            child,
-            ValueListenableBuilder<bool>(
-              valueListenable: isHovering,
-              builder: (context, hovering, __) {
-                return AnimatedOpacity(
-                  duration: const Duration(milliseconds: 200),
-                  opacity: hovering ? 1.0 : 0.0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.7),
-                          Colors.transparent,
-                        ],
-                        stops: const [0.0, 0.7],
+    // 【核心】AnimatedOpacity 性能极高，子树始终保留
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: isVisible ? 1.0 : 0.0,
+      // 【关键】禁止透明时响应事件，避免性能损耗
+      child: IgnorePointer(
+        ignoring: !isVisible,
+        child: MouseRegion(
+          onEnter: (_) => isHovering.value = true,
+          onExit: (_) => isHovering.value = false,
+          child: InkWell(
+            onTap: onTap,
+            highlightColor: Colors.transparent,
+            splashColor: Colors.transparent,
+            // Stack 用于绘制徽章和悬停文字，不包含媒体
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // 悬停渐变背景
+                ValueListenableBuilder<bool>(
+                  valueListenable: isHovering,
+                  builder: (_, hovering, __) => AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: hovering ? 1.0 : 0.0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.7),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 0.7],
+                        ),
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+                // 徽章
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: _buildBadge(context, badgeText),
+                ),
+                // 悬停文字
+                _buildHoverText(context, hoverInfoText),
+              ],
             ),
-            Positioned(top: 4, right: 4, child: _buildBadge(badgeText)),
-            _buildHoverText(hoverInfoText, isHovering),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // _buildBadge 和 _buildHoverText 方法保持不变
-  Widget _buildBadge(String text) {
+  Widget _buildBadge(BuildContext context, String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(color: Colors.black.withOpacity(0.7)),
@@ -205,28 +218,46 @@ class _MediaArea extends StatelessWidget {
     );
   }
 
-  Widget _buildHoverText(String text, ValueNotifier<bool> hovering) {
+  Widget _buildHoverText(BuildContext context, String text) {
     return ValueListenableBuilder<bool>(
-      valueListenable: hovering,
-      builder: (context, isHovering, __) {
-        return AnimatedPositioned(
+      valueListenable: isHovering,
+      builder: (_, hovering, __) => AnimatedPositioned(
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+        bottom: hovering ? 8.0 : -40.0,
+        left: 8.0,
+        right: 8.0,
+        child: AnimatedOpacity(
           duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-          bottom: isHovering ? 8.0 : -40.0,
-          left: 8.0,
-          right: 8.0,
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 100),
-            opacity: isHovering ? 1.0 : 0.0,
-            child: Text(
-              text,
-              maxLines: 99,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
+          opacity: hovering ? 1.0 : 0.0,
+          child: Text(
+            text,
+            maxLines: 99,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedFooter extends StatelessWidget {
+  final bool isVisible;
+  final Widget child;
+
+  const _AnimatedFooter({required this.isVisible, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: kCardFooterHeight, 
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        opacity: isVisible ? 1.0 : 0.0, 
+        child: IgnorePointer(ignoring: !isVisible, child: child),
+      ),
     );
   }
 }
