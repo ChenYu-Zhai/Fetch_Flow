@@ -131,7 +131,7 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
     final galleryStateAsync = ref.watch(
       unifiedGalleryProvider(widget.sourceId),
     );
-    final floatingPost = ref.watch(floatingPostProvider);
+    //final floatingPost = ref.watch(floatingPostProvider);
 
     return Scaffold(
       body: Stack(
@@ -149,19 +149,7 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
                   : const Center(child: CircularProgressIndicator());
             },
           ),
-          if (floatingPost != null)
-            Container(
-              color: const Color.fromARGB(128, 0, 0, 0),
-              child: Center(
-                child: GestureDetector(
-                  onTap: () {},
-                  child: FullscreenPreviewContent(
-                    post: floatingPost,
-                    onClose: () => closeFloatingPreview(ref),
-                  ),
-                ),
-              ),
-            ),
+          const _FloatingPreviewOverlay(),
         ],
       ),
     );
@@ -174,73 +162,111 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
       return const Center(child: Text('No posts found.'));
     }
 
-    return RefreshIndicator(
-      onRefresh: () => ref
-          .read(unifiedGalleryProvider(widget.sourceId).notifier)
-          .refresh(),
-      child: ScrollConfiguration(
-        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-        child: MasonryGridView.builder(
-          key: _gridKey,
-          controller: _scrollController,
-          padding: const EdgeInsets.all(8.0),
-          gridDelegate: SliverSimpleGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-          ),
-          mainAxisSpacing: 4.0,
-          crossAxisSpacing: 4.0,
-          cacheExtent: MediaQuery.of(context).size.height * 2.5,
-          itemCount: state.hasMore
-              ? state.posts.length + 1
-              : state.posts.length,
-          itemBuilder: (context, index) {
-            debugPrint("[itemBuilder] itemBuilder正在构建:索引 $index");
-            if (index >= state.posts.length) {
-              debugPrint("[itemBuilder] 加载指示器索引: $index");
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32.0),
-                  child: CircularProgressIndicator(),
+    return StableDragScrollbar(
+      controller: _scrollController,
+
+      onDragStart: () {
+        _isDraggingNotifier.value = true;
+      },
+      onDragEnd: () {
+        _isDraggingNotifier.value = false;
+        _onScroll(); // 在拖拽滚动条结束时额外调用
+      },
+      child: RefreshIndicator(
+        onRefresh: () => ref
+            .read(unifiedGalleryProvider(widget.sourceId).notifier)
+            .refresh(),
+        child: ScrollConfiguration(
+          behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+          child: MasonryGridView.builder(
+            key: _gridKey,
+            controller: _scrollController,
+            padding: const EdgeInsets.all(8.0),
+            gridDelegate: SliverSimpleGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+            ),
+            mainAxisSpacing: 4.0,
+            crossAxisSpacing: 4.0,
+            cacheExtent: MediaQuery.of(context).size.height * 2.5,
+            itemCount: state.hasMore
+                ? state.posts.length + 1
+                : state.posts.length,
+            itemBuilder: (context, index) {
+              debugPrint("[itemBuilder] itemBuilder正在构建:索引 $index");
+              if (index >= state.posts.length) {
+                debugPrint("[itemBuilder] 加载指示器索引: $index");
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              final post = state.posts[index];
+
+              // 1. 计算媒体部分本身的宽高比
+              final mediaAspectRatio = post.width / post.height;
+
+              // 2. 估算卡片的总宽高比
+              //    我们需要知道卡片的宽度来计算总高度
+              final crossAxisCount = ref.read(crossAxisCountNotifierProvider);
+              final screenWidth = MediaQuery.of(context).size.width;
+              const crossAxisSpacing = 4.0;
+              const padding = 8.0 * 2; // GridView 的 padding
+              final cardWidth =
+                  (screenWidth -
+                      padding -
+                      crossAxisSpacing * (crossAxisCount - 1)) /
+                  crossAxisCount;
+
+              // 媒体部分的高度
+              final mediaHeight = cardWidth / mediaAspectRatio;
+              // 卡片总高度
+              final totalCardHeight = mediaHeight + kCardFooterHeight;
+              // 卡片总宽高比
+              final totalAspectRatio = cardWidth / totalCardHeight;
+
+              // vvv --- 这里是核心修改 --- vvv
+              return AspectRatio(
+                key: ValueKey(post.id),
+                aspectRatio: totalAspectRatio,
+                // 我们不再使用 Container 包裹，因为 UnifiedMediaCard 自己会处理好布局
+                child: UnifiedMediaCard(
+                  post: post,
+                  isDraggingNotifier: _isDraggingNotifier, // 将拖拽状态传递进去
                 ),
               );
-            }
-    
-            final post = state.posts[index];
-    
-            // 1. 计算媒体部分本身的宽高比
-            final mediaAspectRatio = post.width / post.height;
-    
-            // 2. 估算卡片的总宽高比
-            //    我们需要知道卡片的宽度来计算总高度
-            final crossAxisCount = ref.read(crossAxisCountNotifierProvider);
-            final screenWidth = MediaQuery.of(context).size.width;
-            const crossAxisSpacing = 4.0;
-            const padding = 8.0 * 2; // GridView 的 padding
-            final cardWidth =
-                (screenWidth -
-                    padding -
-                    crossAxisSpacing * (crossAxisCount - 1)) /
-                crossAxisCount;
-    
-            // 媒体部分的高度
-            final mediaHeight = cardWidth / mediaAspectRatio;
-            // 卡片总高度
-            final totalCardHeight = mediaHeight + kCardFooterHeight;
-            // 卡片总宽高比
-            final totalAspectRatio = cardWidth / totalCardHeight;
-    
-            // vvv --- 这里是核心修改 --- vvv
-            return AspectRatio(
-              key: ValueKey(post.id),
-              aspectRatio: totalAspectRatio,
-              // 我们不再使用 Container 包裹，因为 UnifiedMediaCard 自己会处理好布局
-              child: UnifiedMediaCard(
-                post: post,
-                isDraggingNotifier: _isDraggingNotifier, // 将拖拽状态传递进去
-              ),
-            );
-            // ^^^ --- 这里是核心修改 --- ^^^
-          },
+              // ^^^ --- 这里是核心修改 --- ^^^
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingPreviewOverlay extends ConsumerWidget {
+  const _FloatingPreviewOverlay({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 【注意】在这里监听 floatingPostProvider，而不是在父 Widget 中
+    final floatingPost = ref.watch(floatingPostProvider);
+
+    if (floatingPost == null) {
+      return const SizedBox.shrink(); // 没有浮动预览时，不显示任何东西
+    }
+
+    return Container(
+      color: const Color.fromARGB(128, 0, 0, 0),
+      child: Center(
+        child: GestureDetector(
+          onTap: () {}, // 阻止点击穿透到下面的画廊
+          child: FullscreenPreviewContent(
+            post: floatingPost,
+            onClose: () => closeFloatingPreview(ref),
+          ),
         ),
       ),
     );
