@@ -1,23 +1,27 @@
-import 'dart:async';
 import 'dart:math';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:featch_flow/models/unified_post_model.dart';
 import 'package:featch_flow/providers/floating_preview_provider.dart';
-import 'package:featch_flow/providers/settings_provider.dart';
+import 'package:featch_flow/utils/image_renderer.dart';
 import 'package:featch_flow/widgets/download_button.dart';
 import 'package:featch_flow/widgets/intelligent_video_player.dart';
 import 'package:featch_flow/widgets/show_tag_button.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:featch_flow/providers/cache_manager_provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+
+const double kCardFooterHeight = 44.0;
 
 class UnifiedMediaCard extends ConsumerStatefulWidget {
   final UnifiedPostModel post;
-  const UnifiedMediaCard({super.key, required this.post});
+  final ValueNotifier<bool> isDraggingNotifier; // <<< 1. 添加新参数
+
+  const UnifiedMediaCard({
+    super.key,
+    required this.post,
+    required this.isDraggingNotifier, // <<< 2. 提供默认值
+  });
 
   @override
   ConsumerState<UnifiedMediaCard> createState() => _UnifiedMediaCardState();
@@ -32,6 +36,33 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard>
   Widget build(BuildContext context) {
     super.build(context);
 
+    // 使用 ValueListenableBuilder 来监听状态变化
+    return ValueListenableBuilder<bool>(
+      valueListenable: widget.isDraggingNotifier,
+      builder: (context, isDragging, child) {
+
+        return Container(
+          color: Theme.of(context).canvasColor,
+          child: isDragging ? _buildFastScrollView() : _buildFullCardView(),
+        );
+      },
+    );
+  }
+
+  /// 快速滚动时的简化版UI
+  Widget _buildFastScrollView() {
+    return Column(
+      children: [
+        // 只显示媒体内容
+        Expanded(child: _buildMediaContent()),
+        // 用一个占位符保持总高度一致，防止布局跳动
+        const SizedBox(height: kCardFooterHeight),
+      ],
+    );
+  }
+
+  /// 正常状态下的完整卡片UI
+  Widget _buildFullCardView() {
     final isHovering = ValueNotifier<bool>(false);
 
     final String badgeText =
@@ -54,7 +85,7 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard>
               ),
             ),
           ),
-          SizedBox(height: 44, child: _buildButtonBar()),
+          SizedBox(height: kCardFooterHeight, child: _buildButtonBar()),
         ],
       ),
     );
@@ -68,10 +99,20 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard>
         previewImageUrl: widget.post.previewImageUrl,
       );
     }
-    return ImageRenderer(
-      imageUrl: widget.post.previewImageUrl,
-      fit: BoxFit.contain,
-      alignment: Alignment.center,
+    return VisibilityDetector(
+      key: ValueKey(widget.post.id),
+      onVisibilityChanged: (info) {
+        if (info.visibleFraction > 0.5) {
+          // 视口内 ≥ 50% 显示，提升权重
+        } else {
+          // 减弱或延迟
+        }
+      },
+      child: ImageRenderer(
+        imageUrl: widget.post.previewImageUrl,
+        fit: BoxFit.contain,
+        alignment: Alignment.center,
+      ),
     );
   }
 
@@ -114,14 +155,10 @@ class _MediaArea extends StatelessWidget {
         onTap: onTap,
         highlightColor: Colors.transparent,
         splashColor: Colors.transparent,
-        // ❌ _MediaArea 不再需要 VisibilityDetector，
-        // 因为 IntelligentVideoPlayer 内部已经有了。
-        // 对于图片，也不需要它。
         child: Stack(
           fit: StackFit.expand, // 确保 Stack 填满
           children: [
-            child, // child (Hero -> IntelligentVideoPlayer/ImageRenderer)
-            // ... 你的渐变、Badge、HoverText 逻辑保持不变 ...
+            child,
             ValueListenableBuilder<bool>(
               valueListenable: isHovering,
               builder: (context, hovering, __) {
@@ -190,37 +227,6 @@ class _MediaArea extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class ImageRenderer extends ConsumerWidget {
-  final String imageUrl;
-  final Alignment alignment;
-  final BoxFit fit; // ✅ 新增
-  const ImageRenderer({
-    super.key,
-    required this.imageUrl,
-    this.alignment = Alignment.center,
-    this.fit = BoxFit.contain,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    debugPrint("[ImageRenderer] 构建图片: $imageUrl,");
-    final cacheManager = ref.watch(customCacheManagerProvider);
-    return CachedNetworkImage(
-      cacheManager: cacheManager,
-      imageUrl: imageUrl,
-      fit: BoxFit.contain,
-      alignment: alignment,
-      fadeInDuration: const Duration(milliseconds: 50),
-      fadeOutDuration: const Duration(milliseconds: 20),
-      placeholder: (context, url) => const SizedBox.shrink(),
-      errorWidget: (context, url, error) => Container(
-        color: Colors.grey.shade300,
-        child: const Icon(Icons.broken_image, size: 16),
-      ),
     );
   }
 }
@@ -378,11 +384,9 @@ class TagDetailsDialog extends StatelessWidget {
               ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
             },
             style: TextButton.styleFrom(
-
               foregroundColor: theme.textTheme.bodyLarge?.color?.withOpacity(
                 0.8,
               ),
-
 
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
@@ -394,7 +398,6 @@ class TagDetailsDialog extends StatelessWidget {
           ),
 
           const SizedBox(width: 8),
-
 
           ElevatedButton(
             onPressed: () => Navigator.pop(context),

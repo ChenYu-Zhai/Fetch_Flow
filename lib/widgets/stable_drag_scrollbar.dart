@@ -1,10 +1,8 @@
 // lib/widgets/stable_drag_scrollbar.dart
 
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
-// 1. 【核心修复】为 State 类添加 SingleTickerProviderStateMixin
 class StableDragScrollbar extends StatefulWidget {
   final Widget child;
   final ScrollController controller;
@@ -14,6 +12,7 @@ class StableDragScrollbar extends StatefulWidget {
   final Duration timeToFade;
   final VoidCallback? onDragStart;
   final VoidCallback? onDragEnd;
+
   const StableDragScrollbar({
     super.key,
     required this.child,
@@ -21,7 +20,9 @@ class StableDragScrollbar extends StatefulWidget {
     this.thickness = 8.0,
     this.radius = const Radius.circular(4.0),
     this.fadeDuration = const Duration(milliseconds: 250),
-    this.timeToFade = const Duration(milliseconds: 500),
+    this.timeToFade = const Duration(
+      milliseconds: 5000,
+    ), // Adjusted for a more reasonable default
     this.onDragStart,
     this.onDragEnd,
   });
@@ -33,31 +34,36 @@ class StableDragScrollbar extends StatefulWidget {
 class _StableDragScrollbarState extends State<StableDragScrollbar>
     with SingleTickerProviderStateMixin {
   final GlobalKey _scrollbarKey = GlobalKey();
-  double _dragStartPosition = 0.0;
-  double _scrollOffsetAtDragStart = 0.0;
-
   late final AnimationController _fadeController;
   Timer? _fadeoutTimer;
+
+  // State variables for dragging logic
+  double _dragStartPosition = 0.0;
+  double _scrollOffsetAtDragStart = 0.0;
+  bool _isDragging = false; // Internal flag to track drag state
 
   @override
   void initState() {
     super.initState();
     _fadeController = AnimationController(
-      vsync: this, 
+      vsync: this,
       duration: widget.fadeDuration,
     );
-    widget.controller.addListener(_handleScroll);
+    // Add a listener that ONLY handles the fade animation.
+    // It does NOT call setState, thus preventing layout rebuilds.
+    widget.controller.addListener(_showAndScheduleFadeOut);
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_handleScroll);
+    widget.controller.removeListener(_showAndScheduleFadeOut);
     _fadeoutTimer?.cancel();
     _fadeController.dispose();
     super.dispose();
   }
 
-  void _handleScroll() {
+  void _showAndScheduleFadeOut() {
+
     _fadeController.forward();
 
     _fadeoutTimer?.cancel();
@@ -66,98 +72,110 @@ class _StableDragScrollbarState extends State<StableDragScrollbar>
         _fadeController.reverse();
       }
     });
-
-    if (mounted) {
-      setState(() {});
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final ScrollPosition? position = widget.controller.hasClients
-        ? widget.controller.position
-        : null;
-    Widget scrollbar;
 
-    if (position == null || position.maxScrollExtent <= 0) {
-      scrollbar = const SizedBox.shrink();
-    } else {
-      final double viewportDimension = position.viewportDimension;
-      final double maxScrollExtent = position.maxScrollExtent;
-      final double contentDimension = viewportDimension + maxScrollExtent;
+    return AnimatedBuilder(
+      animation: widget.controller,
+      child: widget.child,
+      builder: (context, child) {
+        final ScrollPosition? position = widget.controller.hasClients
+            ? widget.controller.position
+            : null;
+        Widget scrollbar;
 
-      final double thumbHeight =
-          (viewportDimension / contentDimension) * viewportDimension;
-      final double finalThumbHeight = thumbHeight.clamp(
-        24.0,
-        viewportDimension,
-      );
+        // Only build the scrollbar if it's actually possible to scroll.
+        if (position == null || position.maxScrollExtent <= 0) {
+          scrollbar = const SizedBox.shrink();
+        } else {
+          // Calculate the scrollbar thumb's size and position based on the current scroll offset.
+          final double viewportDimension = position.viewportDimension;
+          final double maxScrollExtent = position.maxScrollExtent;
+          final double contentDimension = viewportDimension + maxScrollExtent;
 
-      final double thumbOffset =
-          (position.pixels / maxScrollExtent) *
-          (viewportDimension - finalThumbHeight);
+          final double thumbHeight =
+              (viewportDimension / contentDimension) * viewportDimension;
+          final double finalThumbHeight = thumbHeight.clamp(
+            24.0,
+            viewportDimension,
+          );
 
-      scrollbar = GestureDetector(
-        key: _scrollbarKey,
-        onVerticalDragStart: _handleDragStart,
-        onVerticalDragUpdate: _handleDragUpdate,
-        onVerticalDragEnd: _handleDragEnd,
-        child: Container(
-          alignment: Alignment.topRight,
-          margin: const EdgeInsets.only(right: 2.0),
-          child: Container(
-            margin: EdgeInsets.only(top: thumbOffset),
-            height: finalThumbHeight,
-            width: widget.thickness,
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).highlightColor.withAlpha((255 * 0.6).round()),
-              borderRadius: BorderRadius.all(widget.radius),
+          final double thumbOffset =
+              (position.pixels / maxScrollExtent) *
+              (viewportDimension - finalThumbHeight);
+
+          // The visible scrollbar widget.
+          scrollbar = GestureDetector(
+            key: _scrollbarKey,
+            onVerticalDragStart: _handleDragStart,
+            onVerticalDragUpdate: _handleDragUpdate,
+            onVerticalDragEnd: _handleDragEnd,
+            child: Container(
+              alignment: Alignment.topRight,
+              margin: const EdgeInsets.only(right: 2.0),
+              child: Container(
+                margin: EdgeInsets.only(top: thumbOffset),
+                height: finalThumbHeight,
+                width: widget.thickness,
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).highlightColor.withAlpha((255 * 0.6).round()),
+                  borderRadius: BorderRadius.all(widget.radius),
+                ),
+              ),
             ),
-          ),
-        ),
-      );
-    }
+          );
+        }
 
-    return Stack(
-      children: [
-        widget.child,
-        FadeTransition(opacity: _fadeController, child: scrollbar),
-      ],
+        // The final layout: a Stack containing the non-rebuilt child and the lightweight scrollbar.
+        return Stack(
+          children: [
+            child!, // The cached `widget.child` is placed here.
+            FadeTransition(opacity: _fadeController, child: scrollbar),
+          ],
+        );
+      },
     );
   }
 
   void _handleDragStart(DragStartDetails details) {
+    _isDragging = true;
     _fadeoutTimer?.cancel();
-    _fadeController.forward();
+    _fadeController.forward(); // Ensure scrollbar is fully visible on drag.
+
     _dragStartPosition = details.globalPosition.dy;
     _scrollOffsetAtDragStart = widget.controller.position.pixels;
     widget.onDragStart?.call();
   }
 
   void _handleDragUpdate(DragUpdateDetails details) {
+    // This uses the "total displacement" model, which is more robust and intuitive.
+    // It calculates how far the user's finger has moved from the start of the drag
+    // and maps that distance to the scrollable content area.
+
     final RenderBox? scrollbarRenderBox =
         _scrollbarKey.currentContext?.findRenderObject() as RenderBox?;
-    if (scrollbarRenderBox == null) return;
+    if (scrollbarRenderBox == null || !scrollbarRenderBox.hasSize) return;
 
     final double scrollbarTrackExtent = scrollbarRenderBox.size.height;
     if (scrollbarTrackExtent <= 0) return;
 
-    final double delta = details.delta.dy;
+    // 1. Calculate the total vertical distance the user's finger has moved.
+    final double dragDisplacement =
+        details.globalPosition.dy - _dragStartPosition;
 
-    const double maxDeltaPerFrame = 1.0; 
-    final double clampedDelta = delta.clamp(
-      -maxDeltaPerFrame,
-      maxDeltaPerFrame,
-    );
-
+    // 2. Calculate the ratio of content scroll range to scrollbar track height.
     final double scrollRatio =
         widget.controller.position.maxScrollExtent / scrollbarTrackExtent;
 
-    final double scrollDelta = clampedDelta * scrollRatio;
+    // 3. Determine how much the content should scroll based on the finger's movement.
+    final double scrollDelta = dragDisplacement * scrollRatio;
 
-    final targetOffset = (widget.controller.offset + scrollDelta).clamp(
+    // 4. Calculate the new scroll offset and clamp it within valid bounds.
+    final double targetOffset = (_scrollOffsetAtDragStart + scrollDelta).clamp(
       0.0,
       widget.controller.position.maxScrollExtent,
     );
@@ -166,7 +184,9 @@ class _StableDragScrollbarState extends State<StableDragScrollbar>
   }
 
   void _handleDragEnd(DragEndDetails details) {
-    // 通知父 widget 结束拖拽
+    _isDragging = false;
+    // After dragging, restart the fade-out timer.
+    _showAndScheduleFadeOut();
     widget.onDragEnd?.call();
   }
 }
