@@ -131,7 +131,6 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
     final galleryStateAsync = ref.watch(
       unifiedGalleryProvider(widget.sourceId),
     );
-    //final floatingPost = ref.watch(floatingPostProvider);
 
     return Scaffold(
       body: Stack(
@@ -227,17 +226,14 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
               // 卡片总宽高比
               final totalAspectRatio = cardWidth / totalCardHeight;
 
-              // vvv --- 这里是核心修改 --- vvv
               return AspectRatio(
                 key: ValueKey(post.id),
                 aspectRatio: totalAspectRatio,
-                // 我们不再使用 Container 包裹，因为 UnifiedMediaCard 自己会处理好布局
                 child: UnifiedMediaCard(
                   post: post,
-                  isDraggingNotifier: _isDraggingNotifier, // 将拖拽状态传递进去
+                  isDraggingNotifier: _isDraggingNotifier, 
                 ),
               );
-              // ^^^ --- 这里是核心修改 --- ^^^
             },
           ),
         ),
