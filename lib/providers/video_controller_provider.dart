@@ -3,6 +3,7 @@
 import 'package:featch_flow/config/network_config.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -54,4 +55,9 @@ final videoLoaderProvider = FutureProvider.autoDispose.family<void, String>((
   player.setVolume(0);
   player.setPlaylistMode(PlaylistMode.single);
   player.play();
+});
+
+final videoActivationProvider = StateProvider.autoDispose.family<bool, String>((ref, videoUrl) {
+  // 默认情况下，视频是不激活的。
+  return false;
 });
