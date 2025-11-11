@@ -37,10 +37,6 @@ class _ImageRendererState extends ConsumerState<ImageRenderer> {
 
   Future<void> _loadImage() async {
     // 检查图片是否已经加载过，如果是，直接完成
-    if (ref.read(mediaLoaderProvider).loadedUrls.contains(widget.imageUrl)) {
-      return;
-    }
-
     final completer = Completer<void>();
 
     // 使用 microtask 确保 ref 在此时是可用的
@@ -124,7 +120,15 @@ class _ImageRendererState extends ConsumerState<ImageRenderer> {
             child: const Icon(Icons.broken_image, size: 16),
           );
         } else {
-          return const SizedBox.shrink();
+          return const Center(
+            child: SizedBox(
+              width: 24, // 可以根据你的UI调整大小
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.0, // 让线条细一点
+              ),
+            ),
+          );
         }
       },
     );
@@ -139,7 +143,15 @@ class _ImageRendererState extends ConsumerState<ImageRenderer> {
       alignment: widget.alignment,
       fadeInDuration: const Duration(milliseconds: 20),
       fadeOutDuration: const Duration(milliseconds: 20),
-      placeholder: (context, url) => const SizedBox.shrink(),
+      placeholder: (context, url) => const Center(
+        child: SizedBox(
+          width: 24, // 可以根据你的UI调整大小
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.0, // 让线条细一点
+          ),
+        ),
+      ),
       errorWidget: (context, url, error) => Container(
         color: Colors.grey.shade300,
         child: const Icon(Icons.broken_image, size: 16),
