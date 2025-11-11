@@ -1,18 +1,12 @@
 import 'dart:async';
-import 'dart:math';
-import 'dart:math' as math;
 import 'package:featch_flow/models/unified_post_model.dart';
 import 'package:featch_flow/providers/floating_preview_provider.dart';
 import 'package:featch_flow/providers/unified_gallery_provider.dart';
-import 'package:featch_flow/utils/image_renderer.dart';
 import 'package:featch_flow/widgets/floating_preview_content.dart';
-import 'package:featch_flow/widgets/placeholder_card.dart';
 import 'package:featch_flow/widgets/stable_drag_scrollbar.dart';
-import 'package:featch_flow/widgets/staggered_build_wrapper.dart';
 import 'package:featch_flow/widgets/unified_media_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:featch_flow/services/media_preload_service.dart';
 import 'package:featch_flow/providers/settings_provider.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:riverpod/src/framework.dart';
@@ -131,6 +125,8 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
     final galleryStateAsync = ref.watch(
       unifiedGalleryProvider(widget.sourceId),
     );
+    // ✅ 在构建 Stack 之前，先监听 provider 的状态
+    final floatingPost = ref.watch(floatingPostProvider);
 
     return Scaffold(
       body: Stack(
@@ -148,7 +144,8 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
                   : const Center(child: CircularProgressIndicator());
             },
           ),
-          const _FloatingPreviewOverlay(),
+          // ✅ 解决方案：仅当 floatingPost 不为 null 时，才构建并添加 _FloatingPreviewOverlay
+          if (floatingPost != null) const _FloatingPreviewOverlay(),
         ],
       ),
     );
@@ -231,7 +228,7 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
                 aspectRatio: totalAspectRatio,
                 child: UnifiedMediaCard(
                   post: post,
-                  isDraggingNotifier: _isDraggingNotifier, 
+                  isDraggingNotifier: _isDraggingNotifier,
                 ),
               );
             },
@@ -247,18 +244,17 @@ class _FloatingPreviewOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 【注意】在这里监听 floatingPostProvider，而不是在父 Widget 中
     final floatingPost = ref.watch(floatingPostProvider);
 
     if (floatingPost == null) {
-      return const SizedBox.shrink(); // 没有浮动预览时，不显示任何东西
+      return const SizedBox.shrink();
     }
 
     return Container(
       color: const Color.fromARGB(128, 0, 0, 0),
       child: Center(
         child: GestureDetector(
-          onTap: () {}, // 阻止点击穿透到下面的画廊
+          onTap: () {},
           child: FullscreenPreviewContent(
             post: floatingPost,
             onClose: () => closeFloatingPreview(ref),

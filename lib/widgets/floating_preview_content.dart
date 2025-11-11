@@ -87,29 +87,36 @@ class _FullscreenPreviewContentState
       bindings: shortcuts,
       child: FocusScope(
         autofocus: true,
-          child: Stack(
-            children: [
-              Positioned.fill(child: _buildMedia()),
-              Positioned(
-                top: 40,
-                right: 16,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                  onPressed: widget.onClose,
-                ),
+        child: Stack(
+          children: [
+            Positioned.fill(child: _buildMedia()),
+            Positioned(
+              top: 40,
+              right: 16,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: widget.onClose,
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildMedia() {
     if (widget.post.mediaType == MediaType.video) {
+      // 1. 优先处理成功状态
+      if (_controller != null) {
+        return Video(controller: _controller!, fit: BoxFit.contain);
+      }
+
+      // 2. 处理加载状态
       if (_isLoadingVideo) {
         return const Center(child: CircularProgressIndicator());
       }
 
+      // 3. 处理明确的错误状态
       if (_error != null) {
         return Center(
           child: Column(
@@ -127,12 +134,13 @@ class _FullscreenPreviewContentState
         );
       }
 
-      if (_controller == null) return const SizedBox.shrink();
-
-      return Video(controller: _controller!, fit: BoxFit.contain);
+      // 4. ✅ 捕获所有其他未知或意外状态，提供一个安全的后备UI
+      return const Center(
+        child: Icon(Icons.hourglass_empty, color: Colors.white, size: 48),
+      );
     }
 
-    // 图片
+    // 图片 (代码不变)
     return InteractiveViewer(
       panEnabled: true,
       scaleFactor: 800,
@@ -148,4 +156,5 @@ class _FullscreenPreviewContentState
       ),
     );
   }
+  
 }
