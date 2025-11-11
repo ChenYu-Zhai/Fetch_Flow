@@ -1,5 +1,4 @@
-// lib/widgets/intelligent_video_player.dart
-
+import 'package:featch_flow/config/network_config.dart';
 import 'package:featch_flow/utils/image_renderer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,42 +9,53 @@ import '../providers/video_controller_provider.dart';
 class IntelligentVideoPlayer extends ConsumerStatefulWidget {
   final String videoUrl;
   final String previewImageUrl;
-  
+  final bool isPausedByDrag;
 
   const IntelligentVideoPlayer({
     Key? key,
     required this.videoUrl,
     required this.previewImageUrl,
+    this.isPausedByDrag = false,
   }) : super(key: key);
 
   @override
-  ConsumerState<IntelligentVideoPlayer> createState() => _IntelligentVideoPlayerState();
+  ConsumerState<IntelligentVideoPlayer> createState() =>
+      _IntelligentVideoPlayerState();
 }
 
-class _IntelligentVideoPlayerState extends ConsumerState<IntelligentVideoPlayer> {
-  // 唯一需要的状态：是否应该激活播放器？
+class _IntelligentVideoPlayerState
+    extends ConsumerState<IntelligentVideoPlayer> {
+  VisibilityInfo? _lastVisibilityInfo;
   bool _isPlayerActive = false;
+
+  @override
+  void didUpdateWidget(IntelligentVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPausedByDrag != oldWidget.isPausedByDrag) {
+      _updatePlayerState();
+    }
+  }
+
+  void _updatePlayerState() {
+    if (!mounted || _lastVisibilityInfo == null) return;
+
+    final isVisible = _lastVisibilityInfo!.visibleFraction > 0.05;
+    final shouldBeActive = isVisible && !widget.isPausedByDrag;
+
+    if (shouldBeActive != _isPlayerActive) {
+      setState(() {
+        _isPlayerActive = shouldBeActive;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return VisibilityDetector(
       key: ValueKey(widget.videoUrl),
       onVisibilityChanged: (info) {
-        final isVisible = info.visibleFraction >= 0.05;
-        
-        // 当可见性状态改变时，更新 _isPlayerActive
-        if (mounted && isVisible != _isPlayerActive) {
-          setState(() {
-            _isPlayerActive = isVisible;
-          });
-        }
-
-        // 无论如何，当不可见时，都尝试暂停播放以节省资源
-        if (info.visibleFraction <= 0.04) {
-          // 使用 read，因为它只是执行一个动作
-          final player = ref.read(playerProvider(widget.videoUrl));
-          player.pause();
-        }
+        _lastVisibilityInfo = info;
+        _updatePlayerState();
       },
       child: _buildContent(),
     );
@@ -63,7 +73,12 @@ class _IntelligentVideoPlayerState extends ConsumerState<IntelligentVideoPlayer>
         fit: StackFit.expand,
         children: [
           ImageRenderer(imageUrl: widget.previewImageUrl),
-          const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+          const Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          ),
         ],
       ),
       error: (err, stack) => const Center(
