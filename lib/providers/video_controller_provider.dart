@@ -58,6 +58,5 @@ final videoLoaderProvider = FutureProvider.autoDispose.family<void, String>((
 });
 
 final videoActivationProvider = StateProvider.autoDispose.family<bool, String>((ref, videoUrl) {
-  // 默认情况下，视频是不激活的。
   return false;
 });

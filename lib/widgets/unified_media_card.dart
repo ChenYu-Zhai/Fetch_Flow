@@ -28,7 +28,6 @@ class UnifiedMediaCard extends ConsumerStatefulWidget {
 }
 
 class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
-  // 【关键】状态上移到 State，避免重建时丢失
   final _isHovering = ValueNotifier<bool>(false);
 
   @override
@@ -39,7 +38,6 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
 
   @override
   Widget build(BuildContext context) {
-    // 2. 覆盖层需要的数据（字符串计算非常轻量）
     final badgeText =
         '${widget.post.mediaType.toString().split('.').last.toUpperCase()} • ${widget.post.width}×${widget.post.height}';
     final hoverInfoText = widget.post.tags?.take(5).join(', ') ?? '';
@@ -47,10 +45,6 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
     return ValueListenableBuilder<bool>(
       valueListenable: widget.isDraggingNotifier,
       builder: (context, isDragging, __) {
-        // ✅ isDragging 是我们需要的最新值
-
-        // ✅ 【核心修复】将媒体内容的构建逻辑【移动到】Builder 内部
-        //    这样每次拖动状态变化时，它都会被重新构建，并获得最新的 `isDragging` 值。
         final mediaContent = _buildMediaContent(isDragging);
 
         return Container(
@@ -66,7 +60,7 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
                           tag: widget.post.id,
                           child: Center(
                             child: mediaContent,
-                          ), // ✅ 使用新构建的 mediaContent
+                          ), 
                         ),
                       ),
                       _MediaOverlay(
@@ -81,7 +75,7 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
                   ),
                 ),
                 _AnimatedFooter(
-                  isVisible: !isDragging, // 使用最新的 isDragging
+                  isVisible: !isDragging,
                   child: _buildButtonBar(),
                 ),
               ],
@@ -92,14 +86,13 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
     );
   }
 
-  // ✅ 接收最新的拖动状态作为参数
   Widget _buildMediaContent(bool isDragging) {
     if (widget.post.mediaType == MediaType.video &&
         widget.post.fullImageUrl.isNotEmpty) {
       return IntelligentVideoPlayer(
         videoUrl: widget.post.fullImageUrl,
         previewImageUrl: widget.post.previewImageUrl,
-        isPausedByDrag: isDragging, // ✅ 使用从 Builder 传来的最新值
+        isPausedByDrag: isDragging, 
       );
     }
     return VisibilityDetector(
@@ -125,8 +118,6 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
     );
   }
 }
-
-/// 【核心新组件】轻量级交互覆盖层，仅包含 UI 效果
 class _MediaOverlay extends StatelessWidget {
   final UnifiedPostModel post;
   final bool isVisible;
@@ -146,11 +137,9 @@ class _MediaOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 【核心】AnimatedOpacity 性能极高，子树始终保留
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
       opacity: isVisible ? 1.0 : 0.0,
-      // 【关键】禁止透明时响应事件，避免性能损耗
       child: IgnorePointer(
         ignoring: !isVisible,
         child: MouseRegion(
@@ -160,11 +149,9 @@ class _MediaOverlay extends StatelessWidget {
             onTap: onTap,
             highlightColor: Colors.transparent,
             splashColor: Colors.transparent,
-            // Stack 用于绘制徽章和悬停文字，不包含媒体
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // 悬停渐变背景
                 ValueListenableBuilder<bool>(
                   valueListenable: isHovering,
                   builder: (_, hovering, __) => AnimatedOpacity(
