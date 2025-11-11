@@ -18,9 +18,7 @@ class StableDragScrollbar extends StatefulWidget {
     this.thickness = 8.0,
     this.radius = const Radius.circular(4.0),
     this.fadeDuration = const Duration(milliseconds: 250),
-    this.timeToFade = const Duration(
-      milliseconds: 5000,
-    ),
+    this.timeToFade = const Duration(milliseconds: 5000),
     this.onDragStart,
     this.onDragEnd,
   });
@@ -34,7 +32,6 @@ class _StableDragScrollbarState extends State<StableDragScrollbar>
   final GlobalKey _scrollbarKey = GlobalKey();
   late final AnimationController _fadeController;
   Timer? _fadeoutTimer;
-
 
   double _dragStartPosition = 0.0;
   double _scrollOffsetAtDragStart = 0.0;
@@ -120,11 +117,13 @@ class _StableDragScrollbarState extends State<StableDragScrollbar>
             ),
           );
         }
-
+        final bool isScrollbarVisible = scrollbar is! SizedBox;
         return Stack(
           children: [
-            child!, 
-            FadeTransition(opacity: _fadeController, child: scrollbar),
+            child!,
+            // ✅ 解决方案：只有在滚动条可见时，才将其添加到 Stack 中
+            if (isScrollbarVisible)
+              FadeTransition(opacity: _fadeController, child: scrollbar),
           ],
         );
       },
@@ -150,19 +149,15 @@ class _StableDragScrollbarState extends State<StableDragScrollbar>
 
     if (thumbMovableExtent <= 0) return;
 
-
     final double scrollRatio = maxScrollExtent / thumbMovableExtent;
 
-
     final double scrollDelta = details.delta.dy * scrollRatio;
-
 
     const double maxScrollPerFrame = 10000.0;
     final double clampedScrollDelta = scrollDelta.clamp(
       -maxScrollPerFrame,
       maxScrollPerFrame,
     );
-
 
     final double newScrollOffset =
         (widget.controller.offset + clampedScrollDelta).clamp(
