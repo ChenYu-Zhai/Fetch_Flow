@@ -71,11 +71,6 @@ class MediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
 
   /// 优先加载“较新加入的任务”，支持最大队列长度和去重/优先级调整
   void addRequest(MediaLoadRequest request) {
-    if (state.loadedUrls.contains(request.imageUrl)) {
-      request.onLoad(); // 已经加载完成了，直接回调
-      return;
-    }
-
     if (state.loadingInProgress.contains(request.imageUrl)) {
       // 如果在队列中且未开始加载，则将其移到最前（提升优先级）
       debugPrint('[MediaLoader] Elevating priority for existing pending request: ${request.imageUrl}');

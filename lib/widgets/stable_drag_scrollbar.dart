@@ -157,7 +157,7 @@ class _StableDragScrollbarState extends State<StableDragScrollbar>
     final double scrollDelta = details.delta.dy * scrollRatio;
 
 
-    const double maxScrollPerFrame = 80.0;
+    const double maxScrollPerFrame = 10000.0;
     final double clampedScrollDelta = scrollDelta.clamp(
       -maxScrollPerFrame,
       maxScrollPerFrame,

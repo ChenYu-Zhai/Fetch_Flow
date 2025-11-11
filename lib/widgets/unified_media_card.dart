@@ -28,9 +28,7 @@ class UnifiedMediaCard extends ConsumerStatefulWidget {
 }
 
 class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard>
-    with AutomaticKeepAliveClientMixin {
-  @override
-  bool get wantKeepAlive => true;
+   {
 
   // 【关键】状态上移到 State，避免重建时丢失
   final _isHovering = ValueNotifier<bool>(false);
@@ -43,7 +41,6 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
 
     // 【关键】1. 预先构建稳定且昂贵的媒体 Widget
     final stableMediaHero = Hero(
