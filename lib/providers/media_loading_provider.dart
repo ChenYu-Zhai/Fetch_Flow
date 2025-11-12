@@ -1,22 +1,19 @@
 // media_loading_provider.dart
 
-import 'dart:async';
 import 'dart:collection';
-import 'package:flutter/foundation.dart';
 import 'package:async/async.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 class MediaLoadRequest {
   final String imageUrl;
-  final Future<void> Function() onLoad;
+  final CancelableOperation<void> Function() onLoad;
   final VoidCallback onCancel;
-  final DateTime addedAt;
 
   MediaLoadRequest({
     required this.imageUrl,
     required this.onLoad,
     required this.onCancel,
-    required this.addedAt,
   });
 
   @override
@@ -24,253 +21,165 @@ class MediaLoadRequest {
 }
 
 class MediaLoaderState {
-  final Map<String, CancelableOperation<void>> activeRequests;
-  final Queue<MediaLoadRequest> pendingQueue;
   final LinkedHashSet<String> loadedUrls;
-  final bool isProcessing;
+  final Map<String, CancelableOperation<void>> activeRequests;
+  final List<MediaLoadRequest> pendingRequests;
+  final int cacheHits;
+  final int totalRequests;
 
-  const MediaLoaderState({
-    required this.activeRequests,
-    required this.pendingQueue,
+  int get activeLoads => activeRequests.length;
+  int get pendingCount => pendingRequests.length;
+  double get cacheHitRate =>
+      totalRequests == 0 ? 0.0 : cacheHits / totalRequests;
+
+  MediaLoaderState({
     required this.loadedUrls,
-    required this.isProcessing,
+    required this.activeRequests,
+    required this.pendingRequests,
+    this.cacheHits = 0,
+    this.totalRequests = 0,
   });
 
   MediaLoaderState copyWith({
-    Map<String, CancelableOperation<void>>? activeRequests,
-    Queue<MediaLoadRequest>? pendingQueue,
     LinkedHashSet<String>? loadedUrls,
-    bool? isProcessing,
+    Map<String, CancelableOperation<void>>? activeRequests,
+    List<MediaLoadRequest>? pendingRequests,
+    int? cacheHits,
+    int? totalRequests,
   }) {
     return MediaLoaderState(
-      activeRequests: activeRequests ?? this.activeRequests,
-      pendingQueue: pendingQueue ?? this.pendingQueue,
       loadedUrls: loadedUrls ?? this.loadedUrls,
-      isProcessing: isProcessing ?? this.isProcessing,
+      activeRequests: activeRequests ?? this.activeRequests,
+      pendingRequests: pendingRequests ?? this.pendingRequests,
+      cacheHits: cacheHits ?? this.cacheHits,
+      totalRequests: totalRequests ?? this.totalRequests,
     );
   }
-
-  int get activeLoadCount => activeRequests.length;
 }
 
 final mediaLoaderProvider =
-    StateNotifierProvider<MediaLoaderNotifier, MediaLoaderState>((ref) {
-      final notifier = MediaLoaderNotifier();
-      ref.onDispose(() {
-        notifier._dispose();
-      });
-      return notifier;
-    });
+    StateNotifierProvider.autoDispose<MediaLoaderNotifier, MediaLoaderState>(
+  (ref) => MediaLoaderNotifier(),
+);
 
 class MediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
   static const int maxConcurrent = 8;
-  static const int maxQueueSize = 40;
-  static const int maxLoadedUrlHistory = 1000;
+  static const int maxQueueSize = 50;
+  static const int maxCacheSize = 1000;
 
   MediaLoaderNotifier()
-    : super(
-        MediaLoaderState(
-          activeRequests: {},
-          pendingQueue: Queue(),
-          loadedUrls: LinkedHashSet(),
-          isProcessing: false,
-        ),
-      );
+      : super(
+          MediaLoaderState(
+            loadedUrls: LinkedHashSet<String>(),
+            activeRequests: {},
+            pendingRequests: [],
+          ),
+        );
+
+  @override
+  void dispose() {
+    debugPrint('[MediaLoader] Disposing notifier and cancelling all tasks...');
+    for (final request in state.pendingRequests) {
+      request.onCancel();
+    }
+    for (final operation in state.activeRequests.values) {
+      operation.cancel();
+    }
+    super.dispose();
+  }
 
   void addRequest(MediaLoadRequest request) {
     final url = request.imageUrl;
 
-    // 三重去重检查
     if (state.loadedUrls.contains(url)) {
-      debugPrint('[MediaLoader] Skip: Already loaded $url');
+      state.loadedUrls
+        ..remove(url)
+        ..add(url);
+      request.onLoad().value;
+      state = state.copyWith(
+        cacheHits: state.cacheHits + 1,
+        totalRequests: state.totalRequests + 1,
+      );
       return;
     }
+
     if (state.activeRequests.containsKey(url)) {
-      debugPrint('[MediaLoader] Skip: Already loading $url');
-      return;
-    }
-    if (state.pendingQueue.any((r) => r.imageUrl == url)) {
-      debugPrint('[MediaLoader] Elevate: Move existing $url to front');
-      _moveToFront(url);
       return;
     }
 
-    // 添加到队列头部（LIFO）
-    final newQueue = Queue<MediaLoadRequest>.from(state.pendingQueue)
-      ..addFirst(request);
+    final pendingIndex =
+        state.pendingRequests.indexWhere((r) => r.imageUrl == url);
+    List<MediaLoadRequest> updatedPending = List.from(state.pendingRequests);
 
-    // 超限淘汰
-    while (newQueue.length > maxQueueSize) {
-      final removed = newQueue.removeLast();
-      debugPrint('[MediaLoader] Evict: Queue full, cancel ${removed.imageUrl}');
+    if (pendingIndex != -1) {
+      debugPrint('[MediaLoader] Elevating priority for: $url');
+      updatedPending.removeAt(pendingIndex).onCancel();
+    }
+    updatedPending.add(request);
+
+    if (updatedPending.length > maxQueueSize) {
+      final removed = updatedPending.removeAt(0);
       removed.onCancel();
     }
 
-    state = state.copyWith(pendingQueue: newQueue);
-    debugPrint('[MediaLoader] Enqueue: $url (queue: ${newQueue.length})');
-    _processQueue();
-  }
+    state = state.copyWith(
+      pendingRequests: updatedPending,
+      totalRequests: state.totalRequests + 1,
+    );
 
-  void removePending(String imageUrl) {
-    final newQueue = Queue<MediaLoadRequest>.from(state.pendingQueue)
-      ..removeWhere((r) => r.imageUrl == imageUrl);
+    debugPrint(
+        '[MediaLoader] Added request for: $url. Queue size: ${state.pendingCount}');
 
-    if (newQueue.length != state.pendingQueue.length) {
-      state = state.copyWith(pendingQueue: newQueue);
-      debugPrint('[MediaLoader] Remove: $imageUrl from queue');
-    }
+    Future.microtask(_processQueue);
   }
 
   void _processQueue() {
-    if (state.isProcessing) return;
+    while (state.activeLoads < maxConcurrent && state.pendingRequests.isNotEmpty) {
+      final request = state.pendingRequests.removeLast();
+      final url = request.imageUrl;
 
-    Future.microtask(() {
-      if (!mounted) return;
+      debugPrint('[MediaLoader] Starting load for: $url');
 
-      int availableSlots = maxConcurrent - state.activeLoadCount;
-      if (availableSlots <= 0 || state.pendingQueue.isEmpty) {
-        state = state.copyWith(isProcessing: false);
-        return;
-      }
-
-      state = state.copyWith(isProcessing: true);
-
-      for (
-        int i = 0;
-        i < availableSlots && state.pendingQueue.isNotEmpty;
-        i++
-      ) {
-        final request = state.pendingQueue.removeFirst(); // LIFO: 取最新
-        _startLoad(request);
-      }
-
-      if (state.pendingQueue.isNotEmpty &&
-          state.activeLoadCount < maxConcurrent) {
-        _processQueue();
-      } else {
-        state = state.copyWith(isProcessing: false);
-      }
-    });
-  }
-
-  void _startLoad(MediaLoadRequest request) {
-    final url = request.imageUrl;
-    debugPrint(
-      '[MediaLoader] Start: $url (active: ${state.activeLoadCount + 1})',
-    );
-
-    // 创建可取消的操作
-    final completer = CancelableCompleter<void>(
-      onCancel: () {
-        debugPrint('[MediaLoader] Cancel: $url');
-        request.onCancel();
-      },
-    );
-
-    // 启动加载任务
-    request.onLoad().then(
-      (_) => completer.complete(),
-      onError: completer.completeError, // ✅ 正确传递错误
-    );
-
-    // ✅ 超时控制（使用Timer）
-    final timer = Timer(const Duration(seconds: 10), () {
-      if (!completer.isCompleted && !completer.isCanceled) {
-        debugPrint('[MediaLoader] Timeout: $url');
-        completer.completeError(TimeoutException('Load timeout for $url'));
-      }
-    });
-
-    final operation = completer.operation;
-
-    operation.then(
-      (_) {
-        timer.cancel(); 
-        _onLoadSuccess(url);
-      },
-      onError: (error, stackTrace) {
-        timer.cancel();
-        _onLoadFailed(url, error);
-      },
-    );
-
-    state = state.copyWith(
-      activeRequests: {...state.activeRequests, url: operation},
-    );
-  }
-
-  void _onLoadSuccess(String imageUrl) {
-    debugPrint('[MediaLoader] Success: $imageUrl');
-    _completeLoad(imageUrl);
-    _markAsLoaded(imageUrl);
-  }
-
-  void _onLoadFailed(String imageUrl, dynamic error) {
-    debugPrint('[MediaLoader] Failed: $imageUrl, error: $error');
-    _completeLoad(imageUrl);
-  }
-
-  void _completeLoad(String imageUrl) {
-    final operation = state.activeRequests[imageUrl];
-    if (operation != null) {
-      if (!operation.isCompleted && !operation.isCanceled) {
-        operation.cancel();
-      }
+      final operation = request.onLoad();
 
       state = state.copyWith(
-        activeRequests: {...state.activeRequests}..remove(imageUrl),
+        activeRequests: {...state.activeRequests, url: operation},
+        pendingRequests: state.pendingRequests,
       );
-    }
 
-    debugPrint(
-      '[MediaLoader] Complete: $imageUrl (active: ${state.activeLoadCount})',
-    );
-    _processQueue();
-  }
-
-  void _markAsLoaded(String imageUrl) {
-    final newLoaded = LinkedHashSet<String>.from(state.loadedUrls)
-      ..remove(imageUrl)
-      ..add(imageUrl);
-
-    if (newLoaded.length > maxLoadedUrlHistory) {
-      final oldest = newLoaded.first;
-      debugPrint('[MediaLoader] LRU Evict: $oldest from history');
-      newLoaded.remove(oldest);
-    }
-
-    state = state.copyWith(loadedUrls: newLoaded);
-  }
-
-  void _moveToFront(String imageUrl) {
-    final existing = state.pendingQueue
-        .where((r) => r.imageUrl == imageUrl)
-        .toList();
-
-    if (existing.isNotEmpty) {
-      final newQueue = Queue<MediaLoadRequest>.from(state.pendingQueue)
-        ..removeWhere((r) => r.imageUrl == imageUrl)
-        ..addFirst(existing.first);
-
-      state = state.copyWith(pendingQueue: newQueue);
+      operation.value.then((_) {
+        _completeLoad(url, success: true);
+      }).catchError((error) {
+        if (!operation.isCanceled) {
+          debugPrint('❌ [MediaLoader] Load failed for $url: $error');
+        }
+        _completeLoad(url, success: false);
+      });
     }
   }
 
-  void _dispose() {
-    debugPrint(
-      '[MediaLoader] Dispose: Cleaning up ${state.activeLoadCount} active requests',
-    );
+  void _completeLoad(String imageUrl, {required bool success}) {
+    final newActiveRequests =
+        Map<String, CancelableOperation<void>>.from(state.activeRequests);
+    newActiveRequests.remove(imageUrl);
 
-    // ✅ 取消所有活跃请求
-    for (final operation in state.activeRequests.values) {
-      if (!operation.isCompleted && !operation.isCanceled) {
-        operation.cancel();
+    LinkedHashSet<String> newLoadedUrls = state.loadedUrls;
+    if (success) {
+      newLoadedUrls = LinkedHashSet.from(state.loadedUrls);
+      newLoadedUrls.add(imageUrl);
+      if (newLoadedUrls.length > maxCacheSize) {
+        newLoadedUrls.remove(newLoadedUrls.first);
       }
     }
 
-    // 通知待处理请求取消
-    for (final request in state.pendingQueue) {
-      request.onCancel();
-    }
+    state = state.copyWith(
+      activeRequests: newActiveRequests,
+      loadedUrls: newLoadedUrls,
+    );
+
+    debugPrint(
+        '[MediaLoader] Completed load for: $imageUrl. Active loads: ${state.activeLoads}');
+
+    Future.microtask(_processQueue);
   }
 }
