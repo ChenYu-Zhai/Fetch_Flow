@@ -58,9 +58,7 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
                       Positioned.fill(
                         child: Hero(
                           tag: widget.post.id,
-                          child: Center(
-                            child: mediaContent,
-                          ), 
+                          child: Center(child: mediaContent),
                         ),
                       ),
                       _MediaOverlay(
@@ -92,7 +90,7 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
       return IntelligentVideoPlayer(
         videoUrl: widget.post.fullImageUrl,
         previewImageUrl: widget.post.previewImageUrl,
-        isPausedByDrag: isDragging, 
+        isPausedByDrag: isDragging,
       );
     }
     return VisibilityDetector(
@@ -118,6 +116,7 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
     );
   }
 }
+
 class _MediaOverlay extends StatelessWidget {
   final UnifiedPostModel post;
   final bool isVisible;
@@ -253,6 +252,10 @@ class TagDetailsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     final dynamic meta = post.originalData!['meta'];
     String? prompt;
     if (post.source == 'civitai' &&
@@ -261,77 +264,66 @@ class TagDetailsDialog extends StatelessWidget {
         (meta['prompt'] as String).trim().isNotEmpty) {
       prompt = meta['prompt'] as String;
     }
-
     final String content = (prompt != null && prompt.isNotEmpty)
         ? prompt
         : post.tags!.join(', ');
-
     final items = content
         .split(',')
         .map((s) => s.trim())
         .where((s) => s.isNotEmpty)
         .toList();
-
     return Dialog(
-      backgroundColor: Theme.of(context).cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8), // ← 这里改小
-      ),
+      backgroundColor: Theme.of(context).canvasColor,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
       child: Container(
         width: min(500, MediaQuery.of(context).size.width * 0.9),
         height: min(600, MediaQuery.of(context).size.height * 0.7),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ FIXED: 内联 header 而不是调用未定义的方法
             Row(
               children: [
-                Icon(Icons.tag, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                const Text(
-                  'Tags & Prompt',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                Icon(Icons.tag, color: colorScheme.primary),
+                const SizedBox(width: 12),
+                Text('Tags & Prompt', style: textTheme.titleLarge),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close),
+                  splashRadius: 20,
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Wrap(
-                spacing: 12,
-                children: [
-                  _buildInfoChip(
-                    context,
-                    '类型',
-                    post.mediaType.toString().split('.').last,
-                  ),
-                  _buildInfoChip(
-                    context,
-                    '分辨率',
-                    '${post.width}×${post.height}',
-                  ),
-                  _buildInfoChip(context, '数量', '${items.length} 个'),
-                ],
-              ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                _buildInfoChip(
+                  context,
+                  '类型',
+                  post.mediaType.toString().split('.').last,
+                ),
+                _buildInfoChip(context, '分辨率', '${post.width}×${post.height}'),
+                _buildInfoChip(context, '数量', '${items.length} 个'),
+              ],
             ),
-            const Divider(),
+            const SizedBox(height: 16),
             Expanded(
               child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: items
                       .map((item) => _buildTagChip(context, item))
                       .toList(),
                 ),
               ),
             ),
+            const SizedBox(height: 8),
             _buildDialogActions(context, items),
           ],
         ),
@@ -340,38 +332,57 @@ class TagDetailsDialog extends StatelessWidget {
   }
 
   Widget _buildInfoChip(BuildContext context, String label, String value) {
-    return Chip(
-      label: RichText(
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+        borderRadius: BorderRadius.zero,
+      ),
+      child: RichText(
         text: TextSpan(
-          style: TextStyle(
-            color: Theme.of(context).textTheme.bodyMedium?.color,
-          ),
+          style: theme.textTheme.bodyMedium,
           children: [
             TextSpan(
               text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            TextSpan(text: value),
+            TextSpan(
+              text: value,
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.8),
+              ),
+            ),
           ],
         ),
       ),
-      backgroundColor: Theme.of(context).cardColor,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
   Widget _buildTagChip(BuildContext context, String item) {
+    final theme = Theme.of(context);
     return ActionChip(
-      label: Text(item, style: const TextStyle(fontSize: 13)),
-      backgroundColor: Colors.blue.withValues(alpha: 0.1),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      label: Text(
+        item,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+      ),
+      backgroundColor: Theme.of(context).cardColor,
+      side: BorderSide(color: theme.colorScheme.secondaryContainer, width: 1.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       onPressed: () {
         Clipboard.setData(ClipboardData(text: item));
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('已复制: $item'),
-            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+
+            content: _AnimatedSnackBarContent(message: '已复制: $item'),
+            duration: const Duration(milliseconds: 1500),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            padding: EdgeInsets.zero,
           ),
         );
       },
@@ -379,15 +390,10 @@ class TagDetailsDialog extends StatelessWidget {
   }
 
   Widget _buildDialogActions(BuildContext context, List<String> items) {
-    // 1. 获取当前主题，以便访问颜色和文本样式
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.only(
-        top: 16,
-        right: 8,
-        bottom: 8,
-      ), // 增加上下和右侧的 padding
+      padding: const EdgeInsets.only(top: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -395,42 +401,116 @@ class TagDetailsDialog extends StatelessWidget {
             onPressed: () {
               Clipboard.setData(ClipboardData(text: items.join(', ')));
               Navigator.pop(context);
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('已复制全部到剪贴板'),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              );
             },
             style: TextButton.styleFrom(
-              foregroundColor: theme.textTheme.bodyLarge?.color?.withOpacity(
-                0.8,
-              ),
-
+              foregroundColor: theme.colorScheme.onSurface,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
+                borderRadius: BorderRadius.circular(6),
               ),
-
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
             child: const Text('复制全部'),
           ),
-
           const SizedBox(width: 8),
-
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.colorScheme.primary,
               foregroundColor: theme.colorScheme.onPrimary,
-              elevation: 2,
-              shadowColor: Colors.black.withOpacity(0.2),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
+                borderRadius: BorderRadius.circular(6),
               ),
-
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
             ),
             child: const Text('关闭'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AnimatedSnackBarContent extends StatefulWidget {
+  final String message;
+
+  const _AnimatedSnackBarContent({required this.message});
+
+  @override
+  State<_AnimatedSnackBarContent> createState() =>
+      _AnimatedSnackBarContentState();
+}
+
+class _AnimatedSnackBarContentState extends State<_AnimatedSnackBarContent>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200), 
+      reverseDuration: const Duration(milliseconds: 200), 
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+      reverseCurve: Curves.easeIn,
+    );
+    _slideAnimation =
+        Tween<Offset>(
+          begin: const Offset(0.0, 0.5),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeIn,
+          ),
+        );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: theme.snackBarTheme.backgroundColor ?? Colors.grey.shade800,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            widget.message,
+            style:
+                theme.snackBarTheme.contentTextStyle ??
+                const TextStyle(color: Colors.white),
+          ),
+        ),
       ),
     );
   }

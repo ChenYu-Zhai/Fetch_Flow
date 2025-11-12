@@ -1,5 +1,7 @@
 // lib/screens/main_screen.dart
 
+import 'dart:io';
+import 'package:path/path.dart' as p;
 import 'package:featch_flow/providers/unified_gallery_provider.dart';
 import 'package:featch_flow/screens/settings_screen.dart';
 import 'package:featch_flow/screens/unified_gallery_screen.dart';
@@ -9,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:featch_flow/models/civitai_filters.dart';
 import 'package:featch_flow/widgets/civitai_filter_panel.dart';
+import 'package:path_provider/path_provider.dart';
 
 const List<String> enabledSources = ['civitai', 'rule34'];
 
@@ -42,7 +45,33 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint('[MainScreen] Initialized.');
+    printCachePath(); // 调用这个函数
+  }
+
+  void printCachePath() async {
+    try {
+      Directory tempDir = await getTemporaryDirectory();
+      String tempPath = tempDir.path;
+      String cacheKey =
+          'fetch_flow'; // 确保这个 key 和您 CacheManager 中设置的完全一致
+      String fullCachePath = p.join(
+        tempPath,
+        cacheKey,
+      );
+
+      debugPrint('✅ Cache Manager should be writing to this path:');
+      debugPrint(fullCachePath);
+
+      // 额外检查：看看父目录是否存在
+      Directory parentDir = Directory(p.join(tempPath));
+      if (await parentDir.exists()) {
+        debugPrint('✅ Parent directory exists: ${parentDir.path}');
+      } else {
+        debugPrint('❌ CRITICAL: Parent temporary directory does not exist!');
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to get cache path: $e');
+    }
   }
 
   @override
@@ -111,7 +140,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     return Scaffold(
       body: Column(
         children: [
-
           const CustomTitleBar(),
 
           Expanded(
