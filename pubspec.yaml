@@ -67,6 +67,7 @@ dependencies:
   fluttertoast: ^9.0.0
   zoom_pinch_overlay: ^1.4.3
   infinite_scroll_pagination: ^5.1.1
+  window_manager: ^0.5.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -90,6 +91,8 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+  - assets/logo/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -121,6 +124,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
 flutter_launcher_icons:
   # 1. 指定源图片路径
   image_path: "assets/logo/logo.png"
