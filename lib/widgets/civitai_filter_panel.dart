@@ -140,7 +140,6 @@ class _CivitaiFilterPanelState extends State<CivitaiFilterPanel> {
     );
   }
 
-  // ✅ 2. 全新的 TextField 构建方法
   Widget _buildTextField({
     required TextEditingController controller,
     required FocusNode focusNode,
@@ -191,35 +190,31 @@ class _CivitaiFilterPanelState extends State<CivitaiFilterPanel> {
     );
   }
 
-  // ✅ 3. 全新的 Dropdown 构建方法
   Widget _buildDropdown<T>({
     required T value,
     required List<T> items,
     required ValueChanged<T?> onChanged,
   }) {
     final theme = Theme.of(context);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12.0),
-      child: Container(
-        height: kFilterItemHeight,
-        child: DropdownButton<T>(
-          value: value,
-          items: items.map((item) {
-            return DropdownMenuItem<T>(
-              value: item,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: Text((item as Enum).name, style: const TextStyle(fontWeight: FontWeight.w500)),
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-          dropdownColor: theme.cardColor,
-          style: TextStyle(fontSize: 13, color: theme.textTheme.bodyMedium?.color),
-          icon: Icon(Icons.arrow_drop_down, color: theme.hintColor),
-          underline: const SizedBox.shrink(),
-          focusColor: Colors.transparent,
-        ),
+    return SizedBox(
+      height: kFilterItemHeight,
+      child: DropdownButton<T>(
+        value: value,
+        items: items.map((item) {
+          return DropdownMenuItem<T>(
+            value: item,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Text((item as Enum).name, style: const TextStyle(fontWeight: FontWeight.w500)),
+            ),
+          );
+        }).toList(),
+        onChanged: onChanged,
+        dropdownColor: theme.cardColor,
+        style: TextStyle(fontSize: 13, color: theme.textTheme.bodyMedium?.color),
+        icon: Icon(Icons.arrow_drop_down, color: theme.hintColor),
+        underline: const SizedBox.shrink(),
+        focusColor: Colors.transparent,
       ),
     );
   }
