@@ -23,9 +23,9 @@ Provider<BaseCacheManager> getCacheManagerProvider() {
 
     return CacheManager(
       Config(
-        'customImageCacheKey',
-        stalePeriod: const Duration(days: 15),
-        maxNrOfCacheObjects: 200,
+        'fetch_flow',
+        stalePeriod: const Duration(days: 7),
+        maxNrOfCacheObjects: 10000,
         fileService: HttpFileService(
           httpClient: IOClient(HttpClient()..userAgent = browserUserAgent),
         ),
