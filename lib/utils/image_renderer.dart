@@ -93,7 +93,6 @@ class _ImageRendererState extends ConsumerState<ImageRenderer> {
     if (widget.imageUrl.isEmpty) {
       return _buildErrorWidget();
     }
-
     final isAlreadyLoaded = ref.watch(
       mediaLoaderProvider.select(
         (state) => state.loadedUrls.contains(widget.imageUrl),
