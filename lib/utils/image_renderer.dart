@@ -145,16 +145,14 @@ class _ImageRendererState extends ConsumerState<ImageRenderer> {
       fadeOutDuration: const Duration(milliseconds: 20),
       placeholder: (context, url) => const Center(
         child: SizedBox(
-          width: 24, // 可以根据你的UI调整大小
+          width: 24,
           height: 24,
-          child: CircularProgressIndicator(
-            strokeWidth: 2.0, // 让线条细一点
-          ),
+          child: CircularProgressIndicator(strokeWidth: 2.0),
         ),
       ),
       errorWidget: (context, url, error) => Container(
         color: Colors.grey.shade300,
-        child: const Icon(Icons.broken_image, size: 16),
+        child: const Icon(Icons.broken_image, size: 32),
       ),
     );
   }
