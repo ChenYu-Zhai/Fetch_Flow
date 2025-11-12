@@ -1,4 +1,5 @@
-import 'package:featch_flow/config/network_config.dart';
+// lib/widgets/intelligent_video_player.dart
+
 import 'package:featch_flow/utils/image_renderer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,6 +48,30 @@ class _IntelligentVideoPlayerState
         _isPlayerActive = shouldBeActive;
       });
     }
+    if (!isVisible || widget.isPausedByDrag) {
+        final player = ref.read(playerProvider(widget.videoUrl));
+        player.pause();
+    }
+  }
+  Widget _buildPlaceholder({Widget? overlay}) {
+    final hasPreview = widget.previewImageUrl.isNotEmpty;
+
+    Widget background = hasPreview
+        ? ImageRenderer(imageUrl: widget.previewImageUrl)
+        : Container(color: Colors.black);
+
+    if (overlay == null) {
+      return background;
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      alignment: Alignment.center,
+      children: [
+        background,
+        overlay,
+      ],
+    );
   }
 
   @override
@@ -63,23 +88,23 @@ class _IntelligentVideoPlayerState
 
   Widget _buildContent() {
     if (!_isPlayerActive) {
-      return ImageRenderer(imageUrl: widget.previewImageUrl);
+      return _buildPlaceholder(
+        overlay: const Center(
+          child: Icon(Icons.play_circle_outline, color: Colors.white, size: 48),
+        ),
+      );
     }
 
     final videoLoaderAsync = ref.watch(videoLoaderProvider(widget.videoUrl));
 
     return videoLoaderAsync.when(
-      loading: () => Stack(
-        fit: StackFit.expand,
-        children: [
-          ImageRenderer(imageUrl: widget.previewImageUrl),
-          const Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
-            ),
+      loading: () => _buildPlaceholder(
+        overlay: const Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white,
           ),
-        ],
+        ),
       ),
       error: (err, stack) => const Center(
         child: Icon(Icons.error_outline, color: Colors.red, size: 48),
