@@ -114,10 +114,7 @@ class _ImageRendererState extends ConsumerState<ImageRenderer> {
           if (error.contains('Cancelled by Notifier')) {
             return const SizedBox.shrink();
           }
-          return Container(
-            color: Colors.transparent,
-            child: const Icon(Icons.broken_image, size: 64),
-          );
+          return _buildErrorWidget();
         } else {
           return const Center(
             child: SizedBox(
@@ -148,10 +145,7 @@ class _ImageRendererState extends ConsumerState<ImageRenderer> {
       fadeInDuration: const Duration(milliseconds: 20),
       fadeOutDuration: const Duration(milliseconds: 20),
       placeholder: (context, url) => const SizedBox.shrink(),
-      errorWidget: (context, url, error) => Container(
-        color: Colors.transparent,
-        child: const Icon(Icons.broken_image, size: 64),
-      ),
+      errorWidget: (context, url, error) => _buildErrorWidget(),
     );
   }
 }
