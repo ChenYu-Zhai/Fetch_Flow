@@ -3,7 +3,6 @@
 import 'package:featch_flow/providers/unified_gallery_provider.dart';
 import 'package:featch_flow/screens/settings_screen.dart';
 import 'package:featch_flow/screens/unified_gallery_screen.dart';
-import 'package:featch_flow/widgets/custom_title_bar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,53 +108,41 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final currentSource = enabledSources[_currentIndex];
 
     return Scaffold(
-      body: Column(
-        children: [
-
-          const CustomTitleBar(),
-
-          Expanded(
-            child: Scaffold(
-              appBar: AppBar(
-                title: _buildAppBarTitle(currentSource),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      ref
-                          .read(unifiedGalleryProvider(currentSource).notifier)
-                          .refresh();
-                    },
-                    tooltip: 'Refresh',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.settings),
-                    onPressed: () {
-                      debugPrint('[MainScreen] Navigating to Settings screen.');
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              body: IndexedStack(index: _currentIndex, children: _pages),
-
-              bottomNavigationBar: BottomNavigationBar(
-                currentIndex: _currentIndex,
-                onTap: _onTabTapped,
-                items: enabledSources.map((sourceId) {
-                  return BottomNavigationBarItem(
-                    icon: Icon(_getSourceIcon(sourceId)),
-                    label: sourceId.toUpperCase(),
-                  );
-                }).toList(),
-              ),
-            ),
+      appBar: AppBar(
+        title: _buildAppBarTitle(currentSource),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref
+                  .read(unifiedGalleryProvider(currentSource).notifier)
+                  .refresh();
+            },
+            tooltip: 'Refresh',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              debugPrint('[MainScreen] Navigating to Settings screen.');
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
           ),
         ],
+        bottom:null,
+      ),
+
+      body: IndexedStack(index: _currentIndex, children: _pages),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onTabTapped,
+        items: enabledSources.map((sourceId) {
+          return BottomNavigationBarItem(
+            icon: Icon(_getSourceIcon(sourceId)),
+            label: sourceId.toUpperCase(),
+          );
+        }).toList(),
       ),
     );
   }
@@ -191,7 +178,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             Expanded(child: _buildSearchField(source)),
           ],
         );
-
+      
       default:
         return Padding(
           padding: const EdgeInsets.only(left: 16.0),
