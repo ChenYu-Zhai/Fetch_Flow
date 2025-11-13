@@ -57,6 +57,9 @@ final videoLoaderProvider = FutureProvider.autoDispose.family<void, String>((
   player.play();
 });
 
-final videoActivationProvider = StateProvider.autoDispose.family<bool, String>((ref, videoUrl) {
+final videoActivationProvider = StateProvider.autoDispose.family<bool, String>((
+  ref,
+  videoUrl,
+) {
   return false;
 });

@@ -68,6 +68,8 @@ dependencies:
   zoom_pinch_overlay: ^1.4.3
   infinite_scroll_pagination: ^5.1.1
   window_manager: ^0.5.1
+  async: ^2.13.0
+  path: ^1.9.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

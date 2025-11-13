@@ -64,17 +64,15 @@ class TestableMediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
   final int maxQueueSize;
   int activeLoads = 0;
 
-  TestableMediaLoaderNotifier({
-    this.maxConcurrent = 3,
-    this.maxQueueSize = 100,
-  }) : super(
-          MediaLoaderState(
-            activeRequests: {},
-            pendingRequests: [],
-            loadedUrls: {},
-            loadingInProgress: {},
-          ),
-        );
+  TestableMediaLoaderNotifier({this.maxConcurrent = 3, this.maxQueueSize = 100})
+    : super(
+        MediaLoaderState(
+          activeRequests: {},
+          pendingRequests: [],
+          loadedUrls: {},
+          loadingInProgress: {},
+        ),
+      );
 
   // --- 这里的逻辑与你提供的代码完全相同 ---
   void addRequest(MediaLoadRequest request) {
@@ -85,7 +83,8 @@ class TestableMediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
 
     if (state.loadingInProgress.contains(request.imageUrl)) {
       debugPrint(
-          '[Test] Elevating priority for existing pending request: ${request.imageUrl}');
+        '[Test] Elevating priority for existing pending request: ${request.imageUrl}',
+      );
       final newList = state.pendingRequests
           .where((r) => r.imageUrl != request.imageUrl)
           .toList();
@@ -127,7 +126,7 @@ class TestableMediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
         state = state.copyWith(pendingRequests: newRequests);
         continue;
       }
-      
+
       request.onLoad();
       activeLoads++;
 
@@ -178,19 +177,41 @@ void main() {
       final loadedOrder = <String>[];
       final notifier = TestableMediaLoaderNotifier(maxConcurrent: 1);
 
-      // Add three requests. Only the first one ('A') will start loading.
-      notifier.addRequest(createMockRequest('A', onLoad: () => loadedOrder.add('A'), onCancel: () {}));
-      notifier.addRequest(createMockRequest('B', onLoad: () => loadedOrder.add('B'), onCancel: () {}));
-      notifier.addRequest(createMockRequest('C', onLoad: () => loadedOrder.add('C'), onCancel: () {}));
+      notifier.addRequest(
+        createMockRequest(
+          'A',
+          onLoad: () => loadedOrder.add('A'),
+          onCancel: () {},
+        ),
+      );
+      notifier.addRequest(
+        createMockRequest(
+          'B',
+          onLoad: () => loadedOrder.add('B'),
+          onCancel: () {},
+        ),
+      );
+      notifier.addRequest(
+        createMockRequest(
+          'C',
+          onLoad: () => loadedOrder.add('C'),
+          onCancel: () {},
+        ),
+      );
 
       // Initially, only A has loaded. B and C are in the queue.
       expect(loadedOrder, ['A']);
-      expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), ['B', 'C']);
+      expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), [
+        'B',
+        'C',
+      ]);
 
       // Complete A. The notifier should process the last item from the queue ('C').
       notifier.completeLoad('A');
       expect(loadedOrder, ['A', 'C']);
-      expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), ['B']);
+      expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), [
+        'B',
+      ]);
 
       // Complete C. The notifier should process the remaining item ('B').
       notifier.completeLoad('C');
@@ -198,85 +219,171 @@ void main() {
       expect(notifier.state.pendingRequests.isEmpty, isTrue);
     });
 
-    test('Max Queue Size: Discards the oldest request when limit is exceeded', () {
-      final cancelledUrls = <String>[];
-      final notifier = TestableMediaLoaderNotifier(maxConcurrent: 0, maxQueueSize: 2); // No active loads to test queue only
+    test(
+      'Max Queue Size: Discards the oldest request when limit is exceeded',
+      () {
+        final cancelledUrls = <String>[];
+        final notifier = TestableMediaLoaderNotifier(
+          maxConcurrent: 0,
+          maxQueueSize: 2,
+        ); // No active loads to test queue only
 
-      notifier.addRequest(createMockRequest('A', onLoad: () {}, onCancel: () => cancelledUrls.add('A')));
-      notifier.addRequest(createMockRequest('B', onLoad: () {}, onCancel: () => cancelledUrls.add('B')));
+        notifier.addRequest(
+          createMockRequest(
+            'A',
+            onLoad: () {},
+            onCancel: () => cancelledUrls.add('A'),
+          ),
+        );
+        notifier.addRequest(
+          createMockRequest(
+            'B',
+            onLoad: () {},
+            onCancel: () => cancelledUrls.add('B'),
+          ),
+        );
 
-      // Queue is now [A, B].
-      expect(notifier.state.pendingRequests.length, 2);
+        expect(notifier.state.pendingRequests.length, 2);
 
-      // Add 'C'. This should exceed the queue size of 2, causing 'A' (the oldest) to be removed and cancelled.
-      notifier.addRequest(createMockRequest('C', onLoad: () {}, onCancel: () => cancelledUrls.add('C')));
+        notifier.addRequest(
+          createMockRequest(
+            'C',
+            onLoad: () {},
+            onCancel: () => cancelledUrls.add('C'),
+          ),
+        );
 
-      // Verify that 'A' was cancelled.
-      expect(cancelledUrls, ['A']);
-      // Verify that the queue now contains [B, C].
-      expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), ['B', 'C']);
-    });
+        expect(cancelledUrls, ['A']);
+        expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), [
+          'B',
+          'C',
+        ]);
+      },
+    );
 
-    test('Priority Elevation: Moves an existing request to the front of the LIFO queue', () {
-      final loadedOrder = <String>[];
-      final notifier = TestableMediaLoaderNotifier(maxConcurrent: 1);
+    test(
+      'Priority Elevation: Moves an existing request to the front of the LIFO queue',
+      () {
+        final loadedOrder = <String>[];
+        final notifier = TestableMediaLoaderNotifier(maxConcurrent: 1);
 
-      notifier.addRequest(createMockRequest('A', onLoad: () => loadedOrder.add('A'), onCancel: () {}));
-      notifier.addRequest(createMockRequest('B', onLoad: () => loadedOrder.add('B'), onCancel: () {}));
-      notifier.addRequest(createMockRequest('C', onLoad: () => loadedOrder.add('C'), onCancel: () {}));
-      
-      // Queue is [B, C]. Now, re-add 'B' to elevate its priority.
-      notifier.addRequest(createMockRequest('B', onLoad: () => loadedOrder.add('B'), onCancel: () {}));
+        notifier.addRequest(
+          createMockRequest(
+            'A',
+            onLoad: () => loadedOrder.add('A'),
+            onCancel: () {},
+          ),
+        );
+        notifier.addRequest(
+          createMockRequest(
+            'B',
+            onLoad: () => loadedOrder.add('B'),
+            onCancel: () {},
+          ),
+        );
+        notifier.addRequest(
+          createMockRequest(
+            'C',
+            onLoad: () => loadedOrder.add('C'),
+            onCancel: () {},
+          ),
+        );
+        notifier.addRequest(
+          createMockRequest(
+            'B',
+            onLoad: () => loadedOrder.add('B'),
+            onCancel: () {},
+          ),
+        );
 
-      // The queue order should now be [C, B], making 'B' the next to be processed.
-      expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), ['C', 'B']);
+        expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), [
+          'C',
+          'B',
+        ]);
 
-      // Complete the currently active load ('A'). 'B' should be processed next.
-      notifier.completeLoad('A');
-      expect(loadedOrder, ['A', 'B']);
+        notifier.completeLoad('A');
+        expect(loadedOrder, ['A', 'B']);
 
-      // Complete 'B'. 'C' should be processed last.
-      notifier.completeLoad('B');
-      expect(loadedOrder, ['A', 'B', 'C']);
-    });
+        notifier.completeLoad('B');
+        expect(loadedOrder, ['A', 'B', 'C']);
+      },
+    );
 
     test('Concurrency Limit: Does not start more loads than maxConcurrent', () {
       final loadedUrls = <String>[];
       final notifier = TestableMediaLoaderNotifier(maxConcurrent: 2);
 
-      notifier.addRequest(createMockRequest('A', onLoad: () => loadedUrls.add('A'), onCancel: () {}));
-      notifier.addRequest(createMockRequest('B', onLoad: () => loadedUrls.add('B'), onCancel: () {}));
-      notifier.addRequest(createMockRequest('C', onLoad: () => loadedUrls.add('C'), onCancel: () {}));
-      notifier.addRequest(createMockRequest('D', onLoad: () => loadedUrls.add('D'), onCancel: () {}));
-      
+      notifier.addRequest(
+        createMockRequest(
+          'A',
+          onLoad: () => loadedUrls.add('A'),
+          onCancel: () {},
+        ),
+      );
+      notifier.addRequest(
+        createMockRequest(
+          'B',
+          onLoad: () => loadedUrls.add('B'),
+          onCancel: () {},
+        ),
+      );
+      notifier.addRequest(
+        createMockRequest(
+          'C',
+          onLoad: () => loadedUrls.add('C'),
+          onCancel: () {},
+        ),
+      );
+      notifier.addRequest(
+        createMockRequest(
+          'D',
+          onLoad: () => loadedUrls.add('D'),
+          onCancel: () {},
+        ),
+      );
+
       // With concurrency of 2, 'A' and 'B' should have started loading.
       expect(loadedUrls, ['A', 'B']);
       expect(notifier.activeLoads, 2);
       // 'C' and 'D' should be waiting in the queue.
-      expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), ['C', 'D']);
-      
+      expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), [
+        'C',
+        'D',
+      ]);
+
       // Complete 'A'. A slot opens up. The last queued item ('D') should start.
       notifier.completeLoad('A');
       expect(loadedUrls, ['A', 'B', 'D']);
       expect(notifier.activeLoads, 2);
-      expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), ['C']);
+      expect(notifier.state.pendingRequests.map((r) => r.imageUrl).toList(), [
+        'C',
+      ]);
     });
 
-    test('Already Loaded: Immediately calls onLoad for an already loaded URL', () {
-      var onLoadCalled = false;
-      final notifier = TestableMediaLoaderNotifier();
-      
-      // Manually set state to simulate 'A' is already loaded.
-      notifier.state = notifier.state.copyWith(loadedUrls: {'A'});
+    test(
+      'Already Loaded: Immediately calls onLoad for an already loaded URL',
+      () {
+        var onLoadCalled = false;
+        final notifier = TestableMediaLoaderNotifier();
 
-      // Add a request for the already loaded URL.
-      notifier.addRequest(createMockRequest('A', onLoad: () => onLoadCalled = true, onCancel: () {}));
-      
-      // onLoad should be called instantly.
-      expect(onLoadCalled, isTrue);
-      // Nothing should be queued or in progress.
-      expect(notifier.state.pendingRequests.isEmpty, isTrue);
-      expect(notifier.activeLoads, 0);
-    });
+        // Manually set state to simulate 'A' is already loaded.
+        notifier.state = notifier.state.copyWith(loadedUrls: {'A'});
+
+        // Add a request for the already loaded URL.
+        notifier.addRequest(
+          createMockRequest(
+            'A',
+            onLoad: () => onLoadCalled = true,
+            onCancel: () {},
+          ),
+        );
+
+        // onLoad should be called instantly.
+        expect(onLoadCalled, isTrue);
+        // Nothing should be queued or in progress.
+        expect(notifier.state.pendingRequests.isEmpty, isTrue);
+        expect(notifier.activeLoads, 0);
+      },
+    );
   });
 }

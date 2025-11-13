@@ -14,8 +14,9 @@ class DownloadButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Listen to the download status of a specific post.
     // 监听特定帖子的下载状态。
-    final downloadInfo = ref.watch(downloadNotifierProvider)[post.id] ?? const DownloadInfo();
-    
+    final downloadInfo =
+        ref.watch(downloadNotifierProvider)[post.id] ?? const DownloadInfo();
+
     // Build different UI based on the status.
     // 根据状态构建不同的 UI。
     return SizedBox(
@@ -25,12 +26,17 @@ class DownloadButton extends ConsumerWidget {
     );
   }
 
-  Widget _buildButtonContent(BuildContext context, WidgetRef ref, DownloadInfo info) {
+  Widget _buildButtonContent(
+    BuildContext context,
+    WidgetRef ref,
+    DownloadInfo info,
+  ) {
     switch (info.status) {
       case DownloadStatus.notDownloaded:
         return IconButton(
           icon: const Icon(Icons.download_for_offline_outlined, size: 20),
-          onPressed: () => ref.read(downloadNotifierProvider.notifier).downloadPost(post),
+          onPressed: () =>
+              ref.read(downloadNotifierProvider.notifier).downloadPost(post),
           tooltip: 'Download',
         );
 
@@ -60,6 +66,4 @@ class DownloadButton extends ConsumerWidget {
         return const Icon(Icons.check_circle, color: Colors.green, size: 24);
     }
   }
-
-
 }

@@ -1,4 +1,4 @@
-import 'dart:ui';
+// lib/widgets/civitai_filter_panel.dart
 
 import 'package:featch_flow/models/civitai_filters.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +7,9 @@ import 'package:flutter/services.dart';
 // ✅ 1. 定义一些常量，方便全局调整样式
 const double kFilterItemHeight = 34.0;
 const double kFilterItemSpacing = 8.0;
-const BorderRadius kFilterItemBorderRadius = BorderRadius.all(Radius.circular(8.0));
+const BorderRadius kFilterItemBorderRadius = BorderRadius.all(
+  Radius.circular(8.0),
+);
 
 class CivitaiFilterPanel extends StatefulWidget {
   final CivitaiFilterState currentFilters;
@@ -26,7 +28,7 @@ class CivitaiFilterPanel extends StatefulWidget {
 class _CivitaiFilterPanelState extends State<CivitaiFilterPanel> {
   late final TextEditingController _usernameController;
   late final TextEditingController _modelIdController;
-  
+
   // 用于处理清除按钮的焦点
   final FocusNode _usernameFocusNode = FocusNode();
   final FocusNode _modelIdFocusNode = FocusNode();
@@ -34,8 +36,12 @@ class _CivitaiFilterPanelState extends State<CivitaiFilterPanel> {
   @override
   void initState() {
     super.initState();
-    _usernameController = TextEditingController(text: widget.currentFilters.username);
-    _modelIdController = TextEditingController(text: widget.currentFilters.modelId?.toString() ?? '');
+    _usernameController = TextEditingController(
+      text: widget.currentFilters.username,
+    );
+    _modelIdController = TextEditingController(
+      text: widget.currentFilters.modelId?.toString() ?? '',
+    );
   }
 
   @override
@@ -82,12 +88,16 @@ class _CivitaiFilterPanelState extends State<CivitaiFilterPanel> {
               icon: Icons.person_outline,
               onSubmitted: (value) {
                 _handleFilterChange(
-                  widget.currentFilters.copyWith(username: value.isNotEmpty ? value : null),
+                  widget.currentFilters.copyWith(
+                    username: value.isNotEmpty ? value : null,
+                  ),
                 );
               },
               onClear: () {
                 _usernameController.clear();
-                _handleFilterChange(widget.currentFilters.copyWith(username: null));
+                _handleFilterChange(
+                  widget.currentFilters.copyWith(username: null),
+                );
               },
             ),
           ),
@@ -111,7 +121,9 @@ class _CivitaiFilterPanelState extends State<CivitaiFilterPanel> {
               },
               onClear: () {
                 _modelIdController.clear();
-                _handleFilterChange(widget.currentFilters.copyWith(modelId: null));
+                _handleFilterChange(
+                  widget.currentFilters.copyWith(modelId: null),
+                );
               },
             ),
           ),
@@ -121,19 +133,22 @@ class _CivitaiFilterPanelState extends State<CivitaiFilterPanel> {
           _buildDropdown<CivitaiSort>(
             value: widget.currentFilters.sort,
             items: CivitaiSort.values,
-            onChanged: (v) => _handleFilterChange(widget.currentFilters.copyWith(sort: v!)),
+            onChanged: (v) =>
+                _handleFilterChange(widget.currentFilters.copyWith(sort: v!)),
           ),
           const SizedBox(width: kFilterItemSpacing),
           _buildDropdown<CivitaiPeriod>(
             value: widget.currentFilters.period,
             items: CivitaiPeriod.values,
-            onChanged: (v) => _handleFilterChange(widget.currentFilters.copyWith(period: v!)),
+            onChanged: (v) =>
+                _handleFilterChange(widget.currentFilters.copyWith(period: v!)),
           ),
           const SizedBox(width: kFilterItemSpacing),
           _buildDropdown<CivitaiNsfw>(
             value: widget.currentFilters.nsfw,
             items: CivitaiNsfw.values,
-            onChanged: (v) => _handleFilterChange(widget.currentFilters.copyWith(nsfw: v!)),
+            onChanged: (v) =>
+                _handleFilterChange(widget.currentFilters.copyWith(nsfw: v!)),
           ),
         ],
       ),
@@ -163,7 +178,10 @@ class _CivitaiFilterPanelState extends State<CivitaiFilterPanel> {
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: TextStyle(fontSize: 13, color: theme.hintColor.withOpacity(0.6)),
+            hintStyle: TextStyle(
+              fontSize: 13,
+              color: theme.hintColor.withOpacity(0.6),
+            ),
             prefixIcon: Icon(icon, size: 16, color: theme.hintColor),
             suffixIcon: value.text.isNotEmpty
                 ? IconButton(
@@ -182,7 +200,10 @@ class _CivitaiFilterPanelState extends State<CivitaiFilterPanel> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: kFilterItemBorderRadius,
-              borderSide: BorderSide(color: theme.colorScheme.secondary, width: 1.5),
+              borderSide: BorderSide(
+                color: theme.colorScheme.secondary,
+                width: 1.5,
+              ),
             ),
           ),
         );
@@ -205,13 +226,19 @@ class _CivitaiFilterPanelState extends State<CivitaiFilterPanel> {
             value: item,
             child: Padding(
               padding: const EdgeInsets.only(left: 12),
-              child: Text((item as Enum).name, style: const TextStyle(fontWeight: FontWeight.w500)),
+              child: Text(
+                (item as Enum).name,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
             ),
           );
         }).toList(),
         onChanged: onChanged,
         dropdownColor: theme.cardColor,
-        style: TextStyle(fontSize: 13, color: theme.textTheme.bodyMedium?.color),
+        style: TextStyle(
+          fontSize: 13,
+          color: theme.textTheme.bodyMedium?.color,
+        ),
         icon: Icon(Icons.arrow_drop_down, color: theme.hintColor),
         underline: const SizedBox.shrink(),
         focusColor: Colors.transparent,

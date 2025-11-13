@@ -60,7 +60,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       rule34Token: _authService.getRule34Token() ?? '',
       rule34UserId: _authService.getRule34UserId() ?? '',
     );
-    debugPrint('[AuthNotifier] Loaded credentials: Civitai token - ${newState.civitaiToken.isNotEmpty}, Rule34 token - ${newState.rule34Token.isNotEmpty}, Rule34 user ID - ${newState.rule34UserId.isNotEmpty}');
+    debugPrint(
+      '[AuthNotifier] Loaded credentials: Civitai token - ${newState.civitaiToken.isNotEmpty}, Rule34 token - ${newState.rule34Token.isNotEmpty}, Rule34 user ID - ${newState.rule34UserId.isNotEmpty}',
+    );
     state = newState;
   }
 

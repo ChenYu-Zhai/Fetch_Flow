@@ -156,5 +156,4 @@ class _FullscreenPreviewContentState
       ),
     );
   }
-  
 }

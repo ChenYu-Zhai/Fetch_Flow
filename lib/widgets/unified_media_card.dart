@@ -1,3 +1,5 @@
+// lib/widgets/unified_media_card.dart
+
 import 'dart:math';
 
 import 'package:featch_flow/models/unified_post_model.dart';
@@ -171,13 +173,11 @@ class _MediaOverlay extends StatelessWidget {
                     ),
                   ),
                 ),
-                // 徽章
                 Positioned(
                   top: 4,
                   right: 4,
                   child: _buildBadge(context, badgeText),
                 ),
-                // 悬停文字
                 _buildHoverText(context, hoverInfoText),
               ],
             ),
@@ -303,11 +303,11 @@ class TagDetailsDialog extends StatelessWidget {
               children: [
                 _buildInfoChip(
                   context,
-                  '类型',
+                  'Type',
                   post.mediaType.toString().split('.').last,
                 ),
-                _buildInfoChip(context, '分辨率', '${post.width}×${post.height}'),
-                _buildInfoChip(context, '数量', '${items.length} 个'),
+                _buildInfoChip(context, 'Resolution', '${post.width}×${post.height}'),
+                _buildInfoChip(context, 'Count', '${items.length} items'),
               ],
             ),
             const SizedBox(height: 16),
@@ -378,7 +378,7 @@ class TagDetailsDialog extends StatelessWidget {
             backgroundColor: Colors.transparent,
             elevation: 0,
 
-            content: _AnimatedSnackBarContent(message: '已复制: $item'),
+            content: _AnimatedSnackBarContent(message: 'Copied: $item'),
             duration: const Duration(milliseconds: 1500),
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -403,7 +403,7 @@ class TagDetailsDialog extends StatelessWidget {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('已复制全部到剪贴板'),
+                  content: const Text('All copied to clipboard'),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4),
@@ -418,7 +418,7 @@ class TagDetailsDialog extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             ),
-            child: const Text('复制全部'),
+            child: const Text('Copy All'),
           ),
           const SizedBox(width: 8),
           ElevatedButton(
@@ -431,7 +431,7 @@ class TagDetailsDialog extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
             ),
-            child: const Text('关闭'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -460,8 +460,8 @@ class _AnimatedSnackBarContentState extends State<_AnimatedSnackBarContent>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200), 
-      reverseDuration: const Duration(milliseconds: 200), 
+      duration: const Duration(milliseconds: 200),
+      reverseDuration: const Duration(milliseconds: 200),
     );
 
     _fadeAnimation = CurvedAnimation(
@@ -470,10 +470,7 @@ class _AnimatedSnackBarContentState extends State<_AnimatedSnackBarContent>
       reverseCurve: Curves.easeIn,
     );
     _slideAnimation =
-        Tween<Offset>(
-          begin: const Offset(0.0, 0.5),
-          end: Offset.zero,
-        ).animate(
+        Tween<Offset>(begin: const Offset(0.0, 0.5), end: Offset.zero).animate(
           CurvedAnimation(
             parent: _controller,
             curve: Curves.easeOutCubic,

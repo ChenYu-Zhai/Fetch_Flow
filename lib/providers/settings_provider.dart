@@ -1,16 +1,8 @@
 // lib/providers/settings_provider.dart
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'shared_preferences_provider.dart';
-
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'shared_preferences_provider.dart';
 
 /* -------------------- 工具函数 -------------------- */
@@ -18,14 +10,6 @@ int _getInt(Ref ref, String key, int fallback) => ref
     .watch(sharedPreferencesProvider)
     .when(
       data: (p) => p.getInt(key) ?? fallback,
-      loading: () => fallback,
-      error: (_, __) => fallback,
-    );
-
-double _getDouble(Ref ref, String key, double fallback) => ref
-    .watch(sharedPreferencesProvider)
-    .when(
-      data: (p) => p.getDouble(key) ?? fallback,
       loading: () => fallback,
       error: (_, __) => fallback,
     );
@@ -55,7 +39,7 @@ final preloadDelayProvider = StateNotifierProvider<PreloadDelayNotifier, int>((
   ref,
 ) {
   final initial = _getInt(ref, 'preloadDelay', 300);
-  return PreloadDelayNotifier(ref, initial); // ✅ 传入 ref
+  return PreloadDelayNotifier(ref, initial);
 });
 
 class PreloadDelayNotifier extends StateNotifier<int> {
@@ -73,7 +57,7 @@ class PreloadDelayNotifier extends StateNotifier<int> {
 final prefetchThresholdNotifierProvider =
     StateNotifierProvider<PrefetchThresholdNotifier, int>((ref) {
       final initial = _getInt(ref, 'prefetchThreshold', 20);
-      return PrefetchThresholdNotifier(ref, initial); // ✅ 传入 ref
+      return PrefetchThresholdNotifier(ref, initial);
     });
 
 class PrefetchThresholdNotifier extends StateNotifier<int> {

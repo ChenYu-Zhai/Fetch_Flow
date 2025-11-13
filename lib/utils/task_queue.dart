@@ -57,10 +57,13 @@ class PreloadTaskQueue {
     _subscription = _taskController.stream.listen((task) async {
       await _semaphore.acquire();
       try {
-        await task().timeout(const Duration(seconds: 10), onTimeout: () {
-          debugPrint("⏰ Task timeout");
-          return null;
-        });
+        await task().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            debugPrint("⏰ Task timeout");
+            return null;
+          },
+        );
       } catch (e, s) {
         debugPrint('🚨 Preload task error: $e\n$s');
       } finally {

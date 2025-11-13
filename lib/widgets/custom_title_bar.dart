@@ -1,3 +1,5 @@
+// lib/widgets/custom_title_bar.dart
+
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -18,7 +20,7 @@ class CustomTitleBar extends StatelessWidget implements PreferredSizeWidget {
             Padding(
               padding: const EdgeInsets.only(left: 8.0),
               child: Row(
-                children:  [
+                children: [
                   // 你可以替换成自己的应用图标
                   Image.asset(
                     'assets/logo/logo.png', // <-- 这里是您图片的路径
@@ -28,8 +30,12 @@ class CustomTitleBar extends StatelessWidget implements PreferredSizeWidget {
                   SizedBox(width: 8),
                   Text(
                     'Featch Flow',
-                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500,letterSpacing: 0.5,),
-                    
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ],
               ),

@@ -59,8 +59,8 @@ class MediaLoaderState {
 
 final mediaLoaderProvider =
     StateNotifierProvider.autoDispose<MediaLoaderNotifier, MediaLoaderState>(
-  (ref) => MediaLoaderNotifier(),
-);
+      (ref) => MediaLoaderNotifier(),
+    );
 
 class MediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
   static const int maxConcurrent = 8;
@@ -68,13 +68,13 @@ class MediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
   static const int maxCacheSize = 1000;
 
   MediaLoaderNotifier()
-      : super(
-          MediaLoaderState(
-            loadedUrls: LinkedHashSet<String>(),
-            activeRequests: {},
-            pendingRequests: [],
-          ),
-        );
+    : super(
+        MediaLoaderState(
+          loadedUrls: LinkedHashSet<String>(),
+          activeRequests: {},
+          pendingRequests: [],
+        ),
+      );
 
   @override
   void dispose() {
@@ -107,8 +107,9 @@ class MediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
       return;
     }
 
-    final pendingIndex =
-        state.pendingRequests.indexWhere((r) => r.imageUrl == url);
+    final pendingIndex = state.pendingRequests.indexWhere(
+      (r) => r.imageUrl == url,
+    );
     List<MediaLoadRequest> updatedPending = List.from(state.pendingRequests);
 
     if (pendingIndex != -1) {
@@ -128,13 +129,15 @@ class MediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
     );
 
     debugPrint(
-        '[MediaLoader] Added request for: $url. Queue size: ${state.pendingCount}');
+      '[MediaLoader] Added request for: $url. Queue size: ${state.pendingCount}',
+    );
 
     Future.microtask(_processQueue);
   }
 
   void _processQueue() {
-    while (state.activeLoads < maxConcurrent && state.pendingRequests.isNotEmpty) {
+    while (state.activeLoads < maxConcurrent &&
+        state.pendingRequests.isNotEmpty) {
       final request = state.pendingRequests.removeLast();
       final url = request.imageUrl;
 
@@ -147,20 +150,23 @@ class MediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
         pendingRequests: state.pendingRequests,
       );
 
-      operation.value.then((_) {
-        _completeLoad(url, success: true);
-      }).catchError((error) {
-        if (!operation.isCanceled) {
-          debugPrint('❌ [MediaLoader] Load failed for $url: $error');
-        }
-        _completeLoad(url, success: false);
-      });
+      operation.value
+          .then((_) {
+            _completeLoad(url, success: true);
+          })
+          .catchError((error) {
+            if (!operation.isCanceled) {
+              debugPrint('❌ [MediaLoader] Load failed for $url: $error');
+            }
+            _completeLoad(url, success: false);
+          });
     }
   }
 
   void _completeLoad(String imageUrl, {required bool success}) {
-    final newActiveRequests =
-        Map<String, CancelableOperation<void>>.from(state.activeRequests);
+    final newActiveRequests = Map<String, CancelableOperation<void>>.from(
+      state.activeRequests,
+    );
     newActiveRequests.remove(imageUrl);
 
     LinkedHashSet<String> newLoadedUrls = state.loadedUrls;
@@ -178,7 +184,8 @@ class MediaLoaderNotifier extends StateNotifier<MediaLoaderState> {
     );
 
     debugPrint(
-        '[MediaLoader] Completed load for: $imageUrl. Active loads: ${state.activeLoads}');
+      '[MediaLoader] Completed load for: $imageUrl. Active loads: ${state.activeLoads}',
+    );
 
     Future.microtask(_processQueue);
   }
