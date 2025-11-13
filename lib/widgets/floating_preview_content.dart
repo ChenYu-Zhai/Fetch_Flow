@@ -145,7 +145,7 @@ class _FullscreenPreviewContentState
       panEnabled: true,
       scaleFactor: 800,
       minScale: 0.5,
-      maxScale: 12.0,
+      maxScale: 120.0,
       child: CachedNetworkImage(
         imageUrl: widget.post.fullImageUrl,
         fit: BoxFit.contain,
