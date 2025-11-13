@@ -9,7 +9,7 @@
 </p>
 <p>
 <a href="https://github.com/ChenYu-Zhai/Fetch_Flow/releases "><img src="https://img.shields.io/github/v/release/ChenYu-Zhai/Fetch_Flow?style=for-the-badge " alt="Latest Release"></a>
-<a href="https://github.com/ChenYu-Zhai/Fetch_Flow/actions/workflows/release.yml "><img src="https://img.shields.io/github/actions/workflow/status/ChenYu-Zhai/Fetch_Flow/release.yml?branch=main&style=for-the-badge " alt="Build Status"></a>
+<a href="https://github.com/ChenYu-Zhai/Fetch_Flow/actions/workflows/release_build.yml"><img src="https://img.shields.io/github/actions/workflow/status/ChenYu-Zhai/Fetch_Flow/release_build.yml?branch=main&style=for-the-badge " alt="Build Status"></a>
 <a href="https://github.com/ChenYu-Zhai/Fetch_Flow/blob/main/LICENSE "><img src="https://img.shields.io/github/license/ChenYu-Zhai/Fetch_Flow?style=for-the-badge " alt="License"></a>
 </p>
 </div>
