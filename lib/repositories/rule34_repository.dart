@@ -35,7 +35,9 @@ class Rule34RepositoryAdapter implements BaseRepository {
     debugPrint('[Rule34Repository] Getting posts... Page: $page, Tags: $tags');
 
     final postList = await _apiService.fetchPostsAsList(page: page, tags: tags);
-    debugPrint('[Rule34Repository] Fetched raw data. Items: ${postList.length}');
+    debugPrint(
+      '[Rule34Repository] Fetched raw data. Items: ${postList.length}',
+    );
 
     // Parse the JSON string in a background isolate.
     // 在后台 Isolate 中解析 JSON 字符串。
@@ -48,7 +50,9 @@ class Rule34RepositoryAdapter implements BaseRepository {
     final unifiedPosts = rule34Posts.map(_transform).toList();
 
     final nextToken = rule34Posts.isNotEmpty ? page + 1 : null;
-    debugPrint('[Rule34Repository] Transformed to ${unifiedPosts.length} unified posts. Next token: $nextToken');
+    debugPrint(
+      '[Rule34Repository] Transformed to ${unifiedPosts.length} unified posts. Next token: $nextToken',
+    );
 
     return (unifiedPosts, nextToken);
   }
@@ -88,8 +92,7 @@ class Rule34RepositoryAdapter implements BaseRepository {
   // 将私有方法修改为使用您自己的 Worker。
   String _createProxyUrl(String originalUrl) {
     if (kIsWeb) {
-      const proxyBaseUrl =
-          'https://purple-mud-3f6b.a2512312054.workers.dev';
+      const proxyBaseUrl = 'https://purple-mud-3f6b.a2512312054.workers.dev';
 
       return '$proxyBaseUrl?url=${Uri.encodeComponent(originalUrl)}';
     }

@@ -26,7 +26,7 @@ Future<String?> getDownloadPath() async {
   } catch (err) {
     print("Cannot get download directory: $err");
   }
-  
+
   directory ??= await getTemporaryDirectory();
   return directory.path;
 }

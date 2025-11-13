@@ -34,7 +34,7 @@ packages:
     source: hosted
     version: "2.7.0"
   async:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: async
       sha256: "758e6d74e971c3e5aceb4110bfd6698efc7f501675bcfe0c775459a8140750eb"
@@ -681,7 +681,7 @@ packages:
     source: hosted
     version: "3.2.1"
   path:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: path
       sha256: "75cca69d1490965be98c73ceaea117e8a04dd21217b37b292c9ddbec0d955bc5"

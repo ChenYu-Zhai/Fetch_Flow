@@ -7,6 +7,4 @@ const String browserUserAgent =
 
 // Global HTTP headers for native platforms.
 // 原生平台全局共享的 HTTP 请求头。
-const Map<String, String> nativeHttpHeaders = {
-  'User-Agent': browserUserAgent,
-};
+const Map<String, String> nativeHttpHeaders = {'User-Agent': browserUserAgent};

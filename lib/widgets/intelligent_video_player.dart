@@ -13,11 +13,11 @@ class IntelligentVideoPlayer extends ConsumerStatefulWidget {
   final bool isPausedByDrag;
 
   const IntelligentVideoPlayer({
-    Key? key,
+    super.key,
     required this.videoUrl,
     required this.previewImageUrl,
     this.isPausedByDrag = false,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<IntelligentVideoPlayer> createState() =>
@@ -49,10 +49,11 @@ class _IntelligentVideoPlayerState
       });
     }
     if (!isVisible || widget.isPausedByDrag) {
-        final player = ref.read(playerProvider(widget.videoUrl));
-        player.pause();
+      final player = ref.read(playerProvider(widget.videoUrl));
+      player.pause();
     }
   }
+
   Widget _buildPlaceholder({Widget? overlay}) {
     final hasPreview = widget.previewImageUrl.isNotEmpty;
 
@@ -67,10 +68,7 @@ class _IntelligentVideoPlayerState
     return Stack(
       fit: StackFit.expand,
       alignment: Alignment.center,
-      children: [
-        background,
-        overlay,
-      ],
+      children: [background, overlay],
     );
   }
 
@@ -100,10 +98,7 @@ class _IntelligentVideoPlayerState
     return videoLoaderAsync.when(
       loading: () => _buildPlaceholder(
         overlay: const Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white,
-          ),
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
         ),
       ),
       error: (err, stack) => const Center(

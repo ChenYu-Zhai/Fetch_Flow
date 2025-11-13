@@ -6,7 +6,6 @@ import 'package:featch_flow/providers/unified_gallery_provider.dart';
 import 'package:featch_flow/screens/settings_screen.dart';
 import 'package:featch_flow/screens/unified_gallery_screen.dart';
 import 'package:featch_flow/widgets/custom_title_bar.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:featch_flow/models/civitai_filters.dart';
@@ -52,12 +51,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     try {
       Directory tempDir = await getTemporaryDirectory();
       String tempPath = tempDir.path;
-      String cacheKey =
-          'fetch_flow'; // 确保这个 key 和您 CacheManager 中设置的完全一致
-      String fullCachePath = p.join(
-        tempPath,
-        cacheKey,
-      );
+      String cacheKey = 'fetch_flow'; // 确保这个 key 和您 CacheManager 中设置的完全一致
+      String fullCachePath = p.join(tempPath, cacheKey);
 
       debugPrint('✅ Cache Manager should be writing to this path:');
       debugPrint(fullCachePath);

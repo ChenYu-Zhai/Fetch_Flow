@@ -14,7 +14,6 @@ final civitaiApiServiceProvider = Provider<CivitaiApiService>((ref) {
   return CivitaiApiService(dio, ref);
 });
 
-
 class CivitaiApiService {
   final Dio _dio;
   final Ref _ref;
@@ -37,7 +36,9 @@ class CivitaiApiService {
       queryParameters.removeWhere((key, value) => value == null);
       final url = _dio.options.baseUrl + '/images';
       final uri = Uri.parse(url).replace(
-        queryParameters: queryParameters.map((k, v) => MapEntry(k, v.toString())),
+        queryParameters: queryParameters.map(
+          (k, v) => MapEntry(k, v.toString()),
+        ),
       );
       debugPrint('Requesting URL: $uri');
       final response = await _dio.get(
@@ -47,7 +48,9 @@ class CivitaiApiService {
       );
 
       if (response.data is Map<String, dynamic>) {
-        debugPrint('Civitai API Response: ${response.data.toString().substring(0, 200)}');
+        debugPrint(
+          'Civitai API Response: ${response.data.toString().substring(0, 200)}',
+        );
         return response.data;
       } else {
         throw DioException(

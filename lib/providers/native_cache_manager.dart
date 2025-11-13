@@ -19,7 +19,9 @@ Provider<BaseCacheManager> getCacheManagerProvider() {
     // In a production environment, these logs are usually removed or disabled through build configurations.
     // 调试信息：在开发模式下打印缓存管理器创建的日志。
     // 在生产环境中，这些日志通常会被移除或通过构建配置禁用。
-    debugPrint('[NativeCacheManager] Creating CacheManager with user agent: $browserUserAgent');
+    debugPrint(
+      '[NativeCacheManager] Creating CacheManager with user agent: $browserUserAgent',
+    );
 
     return CacheManager(
       Config(

@@ -1,11 +1,14 @@
+// lib/widgets/show_tag_button.dart
+
 import 'package:featch_flow/widgets/unified_media_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import '../models/unified_post_model.dart'; 
+import '../models/unified_post_model.dart';
 
-final _tagLoadingProvider =
-    StateProvider.family<bool, String>((ref, postId) => false);
+final _tagLoadingProvider = StateProvider.family<bool, String>(
+  (ref, postId) => false,
+);
 
 class ShowTagButton extends ConsumerWidget {
   final UnifiedPostModel post;

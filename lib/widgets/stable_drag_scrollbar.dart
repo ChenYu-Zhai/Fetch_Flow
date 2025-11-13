@@ -1,3 +1,5 @@
+// lib/widgets/stable_drag_scrollbar.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 

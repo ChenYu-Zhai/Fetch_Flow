@@ -94,7 +94,7 @@ class CivitaiRepositoryAdapter implements BaseRepository {
       width: image.width,
       height: image.height,
       mediaType: image.type,
-      tags: extractedTags, 
+      tags: extractedTags,
       author: image.username,
       score: image.stats?.likeCount ?? 0,
       detailsUrl: 'https://civitai.com/images/${image.id}',

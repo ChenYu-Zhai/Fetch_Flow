@@ -12,7 +12,9 @@ class MobileDesktopDownloader implements Downloader {
 
   Future<String?> _getDownloadPath({String? customPath}) async {
     if (customPath != null && customPath.isNotEmpty) {
-      debugPrint('[MobileDesktopDownloader] Using custom download path: $customPath');
+      debugPrint(
+        '[MobileDesktopDownloader] Using custom download path: $customPath',
+      );
       return customPath;
     }
     Directory? directory;
@@ -31,10 +33,14 @@ class MobileDesktopDownloader implements Downloader {
         directory = await getDownloadsDirectory();
       }
     } catch (err) {
-      debugPrint("[MobileDesktopDownloader] Cannot get download directory: $err");
+      debugPrint(
+        "[MobileDesktopDownloader] Cannot get download directory: $err",
+      );
       directory = await getTemporaryDirectory();
     }
-    debugPrint('[MobileDesktopDownloader] Using download path: ${directory?.path}');
+    debugPrint(
+      '[MobileDesktopDownloader] Using download path: ${directory?.path}',
+    );
     return directory?.path;
   }
 
@@ -50,9 +56,13 @@ class MobileDesktopDownloader implements Downloader {
         throw Exception("Could not determine download path.");
       }
       final savePath = '$downloadPath/$fileName';
-      debugPrint('[MobileDesktopDownloader] Downloading media from $url to $savePath');
+      debugPrint(
+        '[MobileDesktopDownloader] Downloading media from $url to $savePath',
+      );
       await _dio.download(url, savePath);
-      debugPrint('[MobileDesktopDownloader] Successfully downloaded media: $savePath');
+      debugPrint(
+        '[MobileDesktopDownloader] Successfully downloaded media: $savePath',
+      );
     } catch (e) {
       debugPrint('[MobileDesktopDownloader] Failed to download media: $e');
       rethrow;
@@ -72,11 +82,17 @@ class MobileDesktopDownloader implements Downloader {
       }
       final savePath = '$downloadPath/$fileName.txt';
       final file = File(savePath);
-      debugPrint('[MobileDesktopDownloader] Downloading text content to $savePath');
+      debugPrint(
+        '[MobileDesktopDownloader] Downloading text content to $savePath',
+      );
       await file.writeAsString(textContent);
-      debugPrint('[MobileDesktopDownloader] Successfully downloaded text content: $savePath');
+      debugPrint(
+        '[MobileDesktopDownloader] Successfully downloaded text content: $savePath',
+      );
     } catch (e) {
-      debugPrint('[MobileDesktopDownloader] Failed to download text content: $e');
+      debugPrint(
+        '[MobileDesktopDownloader] Failed to download text content: $e',
+      );
       rethrow;
     }
   }

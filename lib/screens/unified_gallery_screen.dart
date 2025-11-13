@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:featch_flow/models/unified_post_model.dart';
 import 'package:featch_flow/providers/floating_preview_provider.dart';
 import 'package:featch_flow/providers/unified_gallery_provider.dart';
 import 'package:featch_flow/widgets/floating_preview_content.dart';
@@ -25,11 +24,9 @@ class UnifiedGalleryScreen extends ConsumerStatefulWidget {
 class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
   final ScrollController _scrollController = ScrollController();
 
-  bool _isFetching = false;
+
   Timer? _fetchThrottleTimer;
   Timer? _preloadThrottleTimer;
-  int _lastPreloadIndex = 0;
-  // bool _isDragging = false;
   final ValueNotifier<bool> _isDraggingNotifier = ValueNotifier<bool>(
     false,
   ); // <<< 替换为这行
@@ -73,40 +70,6 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
       },
     );
   }
-
-  int _findItemIndexAtPixel(double targetPixel, List<UnifiedPostModel> posts) {
-    double accumulatedHeight = 0.0;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final crossAxisCount = ref.read(crossAxisCountNotifierProvider);
-
-    // 瀑布流横向间距、padding 与 item 宽度计算（同你的 itemBuilder 一致）
-    const crossAxisSpacing = 4.0;
-    const padding = 8.0 * 2;
-    final cardWidth =
-        (screenWidth - padding - crossAxisSpacing * (crossAxisCount - 1)) /
-        crossAxisCount;
-
-    for (int i = 0; i < posts.length; i++) {
-      final post = posts[i];
-
-      if (post.width == 0 || post.height == 0) {
-        accumulatedHeight += cardWidth; // fallback to minimum estimate
-        continue;
-      }
-
-      final mediaHeight = cardWidth / (post.width / post.height);
-      final totalCardHeight = mediaHeight + kCardFooterHeight;
-
-      accumulatedHeight += totalCardHeight + 4.0; // + mainAxisSpacing
-
-      if (accumulatedHeight >= targetPixel) {
-        return i;
-      }
-    }
-
-    return posts.length;
-  }
-
   void _fetchNextPageThrottled() {
     if (_fetchThrottleTimer?.isActive ?? false) return;
     _fetchThrottleTimer = Timer(const Duration(milliseconds: 500), () {

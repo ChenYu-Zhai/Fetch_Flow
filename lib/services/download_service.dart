@@ -1,11 +1,9 @@
 // lib/services/download_service.dart
 
 import 'package:featch_flow/models/civitai_image_model.dart';
-import 'package:featch_flow/providers/settings_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../models/unified_post_model.dart';
 import '../utils/downloader.dart';
@@ -75,7 +73,7 @@ class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
 
       _updateStatus(post.id, DownloadStatus.downloaded);
     } catch (e) {
-      print('Download failed for ${post.id}: $e');
+      debugPrint('Download failed for ${post.id}: $e');
       _updateStatus(post.id, DownloadStatus.notDownloaded);
     }
   }
@@ -122,10 +120,10 @@ class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
     if (post.source == 'civitai' && post.originalData!.isNotEmpty) {
       try {
         final civitaiModel = CivitaiImageModel.fromJson(post.originalData!);
-        print(civitaiModel.meta?.prompt);
+        debugPrint(civitaiModel.meta?.prompt);
         return civitaiModel.meta?.prompt ?? post.tags!.join(', ');
       } catch (e) {
-        print('Failed to re-parse CivitaiImageModel from originalData: $e');
+        debugPrint('Failed to re-parse CivitaiImageModel from originalData: $e');
         return post.tags!.join(', ');
       }
     } else {

@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/legacy.dart';
 
 final floatingPostProvider = StateProvider<UnifiedPostModel?>((_) => null);
 
-
 void openFloatingPreview(WidgetRef ref, UnifiedPostModel post) {
   ref.read(floatingPostProvider.notifier).state = post;
 }

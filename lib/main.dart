@@ -1,8 +1,7 @@
 // lib/main.dart
+
 import 'package:featch_flow/providers/auth_provider.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/main_screen.dart';
@@ -10,9 +9,9 @@ import 'package:window_manager/window_manager.dart';
 import 'package:media_kit/media_kit.dart';
 
 void main() async {
-   WidgetsFlutterBinding.ensureInitialized();
-   await windowManager.ensureInitialized();
-     WindowOptions windowOptions = const WindowOptions(
+  WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
+  WindowOptions windowOptions = const WindowOptions(
     size: Size(1280, 800),
     minimumSize: Size(800, 600),
     center: true,
@@ -20,7 +19,7 @@ void main() async {
     skipTaskbar: false,
     titleBarStyle: TitleBarStyle.hidden,
   );
-    windowManager.waitUntilReadyToShow(windowOptions, () async {
+  windowManager.waitUntilReadyToShow(windowOptions, () async {
     await windowManager.show();
     await windowManager.focus();
   });

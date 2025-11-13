@@ -8,8 +8,16 @@ part 'civitai_filters.freezed.dart';
 // Enum definitions follow Dart style guidelines (camelCase).
 // 枚举定义遵循 Dart 风格指南 (camelCase)。
 enum CivitaiSort { mostReactions, mostComments, newest }
+
 enum CivitaiPeriod { allTime, year, month, week, day }
-enum CivitaiNsfw { none, soft, mature, x, blocked } // 'blocked' is our internal state.
+
+enum CivitaiNsfw {
+  none,
+  soft,
+  mature,
+  x,
+  blocked,
+} // 'blocked' is our internal state.
 
 // Extensions for each enum to convert them to API-compatible values.
 // 为每个枚举创建扩展，以便将其转换为 API 兼容的值。
@@ -17,9 +25,12 @@ enum CivitaiNsfw { none, soft, mature, x, blocked } // 'blocked' is our internal
 extension CivitaiSortExtension on CivitaiSort {
   String get toApiValue {
     switch (this) {
-      case CivitaiSort.mostReactions: return 'Most Reactions';
-      case CivitaiSort.mostComments: return 'Most Comments';
-      case CivitaiSort.newest: return 'Newest';
+      case CivitaiSort.mostReactions:
+        return 'Most Reactions';
+      case CivitaiSort.mostComments:
+        return 'Most Comments';
+      case CivitaiSort.newest:
+        return 'Newest';
     }
   }
 }
@@ -27,11 +38,16 @@ extension CivitaiSortExtension on CivitaiSort {
 extension CivitaiPeriodExtension on CivitaiPeriod {
   String get toApiValue {
     switch (this) {
-      case CivitaiPeriod.allTime: return 'AllTime';
-      case CivitaiPeriod.year: return 'Year';
-      case CivitaiPeriod.month: return 'Month';
-      case CivitaiPeriod.week: return 'Week';
-      case CivitaiPeriod.day: return 'Day';
+      case CivitaiPeriod.allTime:
+        return 'AllTime';
+      case CivitaiPeriod.year:
+        return 'Year';
+      case CivitaiPeriod.month:
+        return 'Month';
+      case CivitaiPeriod.week:
+        return 'Week';
+      case CivitaiPeriod.day:
+        return 'Day';
     }
   }
 }
@@ -45,9 +61,12 @@ extension CivitaiNsfwExtension on CivitaiNsfw {
         // According to API documentation, nsfw=boolean, None corresponds to false.
         // 根据 API 文档，nsfw=boolean，None 级别对应 false。
         return false;
-      case CivitaiNsfw.soft: return 'Soft';
-      case CivitaiNsfw.mature: return 'Mature';
-      case CivitaiNsfw.x: return 'X';
+      case CivitaiNsfw.soft:
+        return 'Soft';
+      case CivitaiNsfw.mature:
+        return 'Mature';
+      case CivitaiNsfw.x:
+        return 'X';
       case CivitaiNsfw.blocked:
         // 'blocked' is our internal state, indicating no nsfw content should be shown.
         // 'blocked' 是我们自己的状态，表示不看任何 nsfw 内容。
@@ -55,7 +74,6 @@ extension CivitaiNsfwExtension on CivitaiNsfw {
     }
   }
 }
-
 
 @freezed
 class CivitaiFilterState with _$CivitaiFilterState {
@@ -77,17 +95,17 @@ class CivitaiFilterState with _$CivitaiFilterState {
   Map<String, dynamic> toApiParams() {
     final map = <String, dynamic>{
       'limit': limit,
-      
+
       // Use the extension methods defined for each Enum.
       // 使用我们为每个 Enum 定义的扩展方法。
       'sort': sort.toApiValue,
       'period': period.toApiValue,
-      
+
       // nsfw's toApiValue already handles all cases.
       // nsfw 的 toApiValue 已经处理了所有情况。
       'nsfw': nsfw.toApiValue,
     };
-    
+
     // Debug print (can be kept or removed in production).
     // 调试打印（可以在发布时保留或移除）。
     debugPrint("Civitai API Filter Params: $map");
@@ -98,7 +116,7 @@ class CivitaiFilterState with _$CivitaiFilterState {
     if (modelId != null) map['modelId'] = modelId;
     if (modelVersionId != null) map['modelVersionId'] = modelVersionId;
     if (username != null && username!.isNotEmpty) map['username'] = username;
-    
+
     // If nsfw is 'undefined' (API default behavior), this parameter should not be included.
     // In our logic, we always provide a value (true, false, or string), so no removal is needed here.
     // 如果 nsfw 是 'undefined' (API 默认行为)，则不应包含此参数。

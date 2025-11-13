@@ -38,7 +38,7 @@ class GalleryState with _$GalleryState {
   List<UnifiedPostModel> get deduplicatedPosts {
     final unique = <String, UnifiedPostModel>{};
     int duplicateCount = 0;
-    
+
     for (final post in posts) {
       if (unique.containsKey(post.identityKey)) {
         duplicateCount++;
@@ -46,11 +46,11 @@ class GalleryState with _$GalleryState {
         unique[post.identityKey] = post;
       }
     }
-    
+
     if (duplicateCount > 0) {
       debugPrint('🧹 [GalleryState] Removed $duplicateCount duplicates');
     }
-    
+
     // 保持 API 返回顺序
     return unique.values.toList();
   }
@@ -68,11 +68,8 @@ class UnifiedGalleryNotifier extends StateNotifier<AsyncValue<GalleryState>> {
   /// ✅ 并发控制锁
   bool _isFetching = false;
 
-  UnifiedGalleryNotifier(
-    this._repository,
-    this._sourceId,
-    this._initialFilters,
-  ) : super(const AsyncValue.loading()) {
+  UnifiedGalleryNotifier(this._repository, this._sourceId, this._initialFilters)
+    : super(const AsyncValue.loading()) {
     initialize();
   }
 
@@ -84,10 +81,10 @@ class UnifiedGalleryNotifier extends StateNotifier<AsyncValue<GalleryState>> {
   /// ✅ 获取第一页（带并发保护）
   Future<void> fetchFirstPage() async {
     if (_isFetching || !mounted) return;
-    
+
     _isFetching = true;
     state = const AsyncValue.loading();
-    
+
     try {
       await _fetchData(isRefreshing: true);
     } finally {
@@ -103,17 +100,15 @@ class UnifiedGalleryNotifier extends StateNotifier<AsyncValue<GalleryState>> {
     }
 
     final currentState = state.asData?.value;
-    if (currentState == null || 
-        !currentState.hasMore || 
+    if (currentState == null ||
+        !currentState.hasMore ||
         currentState.isLoadingNextPage) {
       debugPrint('⏭️ [UnifiedGalleryNotifier] Skip fetch (state check)');
       return;
     }
 
     _isFetching = true;
-    state = AsyncValue.data(
-      currentState.copyWith(isLoadingNextPage: true),
-    );
+    state = AsyncValue.data(currentState.copyWith(isLoadingNextPage: true));
 
     try {
       await _fetchData(isRefreshing: false);
@@ -125,10 +120,10 @@ class UnifiedGalleryNotifier extends StateNotifier<AsyncValue<GalleryState>> {
   /// ✅ 应用筛选并刷新
   Future<void> applyFiltersAndRefresh(Map<String, dynamic> newFilters) async {
     if (!mounted) return;
-    
+
     debugPrint('🔄 [UnifiedGalleryNotifier] Applying filters: $newFilters');
     state = const AsyncValue.loading();
-    
+
     try {
       await _fetchData(newFilters: newFilters, isRefreshing: true);
     } catch (e) {
@@ -142,10 +137,12 @@ class UnifiedGalleryNotifier extends StateNotifier<AsyncValue<GalleryState>> {
     if (!mounted) return;
 
     final filtersToUse = state.asData?.value.filters ?? _initialFilters;
-    debugPrint('🔄 [UnifiedGalleryNotifier] Refreshing with filters: $filtersToUse');
-    
+    debugPrint(
+      '🔄 [UnifiedGalleryNotifier] Refreshing with filters: $filtersToUse',
+    );
+
     state = const AsyncValue.loading();
-    
+
     try {
       await _fetchData(newFilters: filtersToUse, isRefreshing: true);
     } catch (e) {
@@ -207,15 +204,19 @@ class UnifiedGalleryNotifier extends StateNotifier<AsyncValue<GalleryState>> {
         }
 
         // ✅ 合并数据并去重
-        final combinedPosts = isRefreshing || oldState == null 
-            ? newPosts 
+        final combinedPosts = isRefreshing || oldState == null
+            ? newPosts
             : [...oldState.posts, ...newPosts];
-        
-        debugPrint('📊 [_fetchData] Before deduplication: ${combinedPosts.length} posts');
-        
+
+        debugPrint(
+          '📊 [_fetchData] Before deduplication: ${combinedPosts.length} posts',
+        );
+
         final deduplicated = _deduplicatePosts(combinedPosts);
-        
-        debugPrint('📊 [_fetchData] After deduplication: ${deduplicated.length} posts');
+
+        debugPrint(
+          '📊 [_fetchData] After deduplication: ${deduplicated.length} posts',
+        );
 
         final newState = GalleryState(
           posts: deduplicated,
@@ -242,18 +243,20 @@ class UnifiedGalleryNotifier extends StateNotifier<AsyncValue<GalleryState>> {
 
         if (attempt == maxRetries) {
           debugPrint('🔥 [_fetchData] Max retries reached. Final failure.');
-          
+
           if (!mounted) {
             debugPrint('⚠️ [_fetchData] Widget disposed after final failure');
             return;
           }
-          
+
           final oldState = state.asData?.value;
           if (isRefreshing || oldState == null) {
             debugPrint('❌ [_fetchData] Setting error state');
             state = AsyncValue.error(e, st);
           } else {
-            debugPrint('⚠️ [_fetchData] Keeping old state, marking loading as false');
+            debugPrint(
+              '⚠️ [_fetchData] Keeping old state, marking loading as false',
+            );
             state = AsyncValue.data(
               oldState.copyWith(isLoadingNextPage: false),
             );
@@ -267,19 +270,20 @@ class UnifiedGalleryNotifier extends StateNotifier<AsyncValue<GalleryState>> {
       }
     }
   }
-  
 
   /// ✅ 帖子去重（基于 identityKey）
   List<UnifiedPostModel> _deduplicatePosts(List<UnifiedPostModel> posts) {
-    debugPrint('🧹 [_deduplicatePosts] Starting deduplication for ${posts.length} posts');
-    
+    debugPrint(
+      '🧹 [_deduplicatePosts] Starting deduplication for ${posts.length} posts',
+    );
+
     final unique = <String, UnifiedPostModel>{};
     int duplicateCount = 0;
 
     for (int i = 0; i < posts.length; i++) {
       final post = posts[i];
       final key = post.identityKey;
-      
+
       if (unique.containsKey(key)) {
         duplicateCount++;
         debugPrint('🧹 [_deduplicatePosts] Duplicate found at index $i: $key');
@@ -287,7 +291,7 @@ class UnifiedGalleryNotifier extends StateNotifier<AsyncValue<GalleryState>> {
         unique[key] = post;
       }
     }
-    
+
     if (duplicateCount > 0) {
       debugPrint('🧹 [_deduplicatePosts] Removed $duplicateCount duplicates');
     } else {
@@ -305,9 +309,14 @@ class UnifiedGalleryNotifier extends StateNotifier<AsyncValue<GalleryState>> {
 }
 
 /// ✅ Repository 工厂
-final repositoryProviderFactory = Provider.family<BaseRepository, String>((ref, sourceId) {
-  debugPrint('🏭 [repositoryProviderFactory] Creating repository for: $sourceId');
-  
+final repositoryProviderFactory = Provider.family<BaseRepository, String>((
+  ref,
+  sourceId,
+) {
+  debugPrint(
+    '🏭 [repositoryProviderFactory] Creating repository for: $sourceId',
+  );
+
   switch (sourceId) {
     case 'civitai':
       final repo = ref.watch(civitaiRepositoryProvider);
@@ -318,28 +327,38 @@ final repositoryProviderFactory = Provider.family<BaseRepository, String>((ref, 
       debugPrint('🏭 [repositoryProviderFactory] Returning Rule34Repository');
       return repo;
     default:
-      debugPrint('🏭 [repositoryProviderFactory] ERROR: No repository for: $sourceId');
+      debugPrint(
+        '🏭 [repositoryProviderFactory] ERROR: No repository for: $sourceId',
+      );
       throw UnimplementedError('No repository for: $sourceId');
   }
 });
 
 /// ✅ ✅ 关键修复：移除 autoDispose
-final unifiedGalleryProvider = StateNotifierProvider
-    .family<UnifiedGalleryNotifier, AsyncValue<GalleryState>, String>(
-  (ref, sourceId) {
-    debugPrint('🏭 [unifiedGalleryProvider] Creating notifier for: $sourceId');
-    
-    final repository = ref.watch(repositoryProviderFactory(sourceId));
-    
-    Map<String, dynamic> initialFilters = {};
-    if (sourceId == 'civitai') {
-      initialFilters = const CivitaiFilterState().toApiParams();
-      debugPrint('🏭 [unifiedGalleryProvider] Civitai initial filters: $initialFilters');
-    } else if (sourceId == 'rule34') {
-      initialFilters = {'tags': ''};
-      debugPrint('🏭 [unifiedGalleryProvider] Rule34 initial filters: $initialFilters');
-    }
+final unifiedGalleryProvider =
+    StateNotifierProvider.family<
+      UnifiedGalleryNotifier,
+      AsyncValue<GalleryState>,
+      String
+    >((ref, sourceId) {
+      debugPrint(
+        '🏭 [unifiedGalleryProvider] Creating notifier for: $sourceId',
+      );
 
-    return UnifiedGalleryNotifier(repository, sourceId, initialFilters);
-  },
-);
+      final repository = ref.watch(repositoryProviderFactory(sourceId));
+
+      Map<String, dynamic> initialFilters = {};
+      if (sourceId == 'civitai') {
+        initialFilters = const CivitaiFilterState().toApiParams();
+        debugPrint(
+          '🏭 [unifiedGalleryProvider] Civitai initial filters: $initialFilters',
+        );
+      } else if (sourceId == 'rule34') {
+        initialFilters = {'tags': ''};
+        debugPrint(
+          '🏭 [unifiedGalleryProvider] Rule34 initial filters: $initialFilters',
+        );
+      }
+
+      return UnifiedGalleryNotifier(repository, sourceId, initialFilters);
+    });

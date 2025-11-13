@@ -45,7 +45,9 @@ class Rule34ApiService {
         'user_id': userId,
       };
       final uri = Uri.parse(_dio.options.baseUrl + '/index.php').replace(
-        queryParameters: queryParameters.map((k, v) => MapEntry(k, v.toString())),
+        queryParameters: queryParameters.map(
+          (k, v) => MapEntry(k, v.toString()),
+        ),
       );
       debugPrint('Requesting URL: $uri');
       final response = await _dio.get<List<dynamic>>(
@@ -53,7 +55,9 @@ class Rule34ApiService {
         queryParameters: queryParameters,
         options: Options(responseType: ResponseType.json),
       );
-      debugPrint('Rule34 API Response: ${response.data.toString().substring(0, 200)}');
+      debugPrint(
+        'Rule34 API Response: ${response.data.toString().substring(0, 200)}',
+      );
       return response.data ?? [];
     } on DioException catch (e, stackTrace) {
       debugPrint('DioException in fetchPostsAsList: $e\n$stackTrace');
