@@ -3,6 +3,8 @@
 <h1>Fetch_Flow</h1>
 <p>
 <strong>一个跨平台 AI 数据集采集工具，用于从 Civitai、Rule34 等在线画廊获取图像与提示词（Prompt）数据。</strong>
+</p>
+<p>
 <strong>A cross-platform AI dataset collection tool for fetching image and prompt data from online galleries such as Civitai and Rule34.</strong>
 </p>
 <p>
