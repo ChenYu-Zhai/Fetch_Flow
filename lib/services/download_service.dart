@@ -4,6 +4,7 @@ import 'package:featch_flow/models/civitai_image_model.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../models/unified_post_model.dart';
 import '../utils/downloader.dart';
@@ -25,7 +26,8 @@ class DownloadInfo {
 class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
   final Dio _dio = Dio();
   final Downloader downloader;
-  DownloadNotifier(this.downloader) : super({});
+  final Ref ref;
+  DownloadNotifier(this.downloader, this.ref) : super({});
 
   Future<void> downloadPost(UnifiedPostModel post) async {
     if (state[post.id]?.status == DownloadStatus.downloading ||
@@ -39,10 +41,12 @@ class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
       final fileExtension = _getFileExtension(post);
       final mediaFileName = '$baseFileName.$fileExtension';
 
+      final saveDirectoryPath = await ref.read(
+        finalDownloadPathProvider.future,
+      );
       if (kIsWeb) {
         await downloader.downloadMedia(post.fullImageUrl, mediaFileName);
       } else {
-        final saveDirectoryPath = await getDownloadPath();
         if (saveDirectoryPath == null) {
           throw Exception(
             "Could not determine download path on this platform.",
@@ -68,7 +72,11 @@ class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
 
       final textContent = _getTextToCopy(post);
       if (textContent.isNotEmpty) {
-        await downloader.downloadText(textContent, baseFileName);
+        await downloader.downloadText(
+          textContent,
+          baseFileName,
+          path: saveDirectoryPath,
+        );
       }
 
       _updateStatus(post.id, DownloadStatus.downloaded);
@@ -123,7 +131,9 @@ class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
         debugPrint(civitaiModel.meta?.prompt);
         return civitaiModel.meta?.prompt ?? post.tags!.join(', ');
       } catch (e) {
-        debugPrint('Failed to re-parse CivitaiImageModel from originalData: $e');
+        debugPrint(
+          'Failed to re-parse CivitaiImageModel from originalData: $e',
+        );
         return post.tags!.join(', ');
       }
     } else {
@@ -137,5 +147,5 @@ class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
 final downloadNotifierProvider =
     StateNotifierProvider<DownloadNotifier, Map<String, DownloadInfo>>((ref) {
       final downloader = ref.watch(downloaderProvider);
-      return DownloadNotifier(downloader);
+      return DownloadNotifier(downloader, ref);
     });
