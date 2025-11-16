@@ -1,5 +1,7 @@
 // lib/services/civitai_api_service.dart
 
+import 'dart:math';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,8 +50,9 @@ class CivitaiApiService {
       );
 
       if (response.data is Map<String, dynamic>) {
+        final responseString = response.data.toString();
         debugPrint(
-          'Civitai API Response: ${response.data.toString().substring(0, 200)}',
+          'Civitai API Response: ${responseString.substring(0, min(responseString.length, 200))}',
         );
         return response.data;
       } else {
