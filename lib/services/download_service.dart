@@ -41,7 +41,7 @@ class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
       final fileExtension = _getFileExtension(post);
       final mediaFileName = '$baseFileName.$fileExtension';
 
-      final saveDirectoryPath = await ref.read(
+      final saveDirectoryPath = await ref.refresh(
         finalDownloadPathProvider.future,
       );
       if (kIsWeb) {
