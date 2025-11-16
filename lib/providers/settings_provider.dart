@@ -2,10 +2,8 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'shared_preferences_provider.dart';
 
-/* -------------------- 工具函数 -------------------- */
 int _getInt(Ref ref, String key, int fallback) => ref
     .watch(sharedPreferencesProvider)
     .when(
@@ -14,9 +12,7 @@ int _getInt(Ref ref, String key, int fallback) => ref
       error: (_, __) => fallback,
     );
 
-/* -------------------- 各配置项 -------------------- */
 
-/// 网格列数（持久化）
 final crossAxisCountNotifierProvider =
     StateNotifierProvider<CrossAxisCountNotifier, int>((ref) {
       final initial = _getInt(ref, 'crossAxisCount', 3);
@@ -71,23 +67,6 @@ class PrefetchThresholdNotifier extends StateNotifier<int> {
   }
 }
 
-/// 下载路径（保持您原有实现）
-final downloadPathProvider =
-    StateNotifierProvider<DownloadPathNotifier, String>((ref) {
-      final prefs = ref.watch(sharedPreferencesProvider).requireValue;
-      return DownloadPathNotifier(prefs);
-    });
-
-class DownloadPathNotifier extends StateNotifier<String> {
-  final SharedPreferences _prefs;
-  DownloadPathNotifier(this._prefs)
-    : super(_prefs.getString('downloadPath') ?? '');
-
-  Future<void> setPath(String path) async {
-    await _prefs.setString('downloadPath', path);
-    state = path;
-  }
-}
 
 /// Slider 实时显示值（纯 UI 状态，不持久化）
 final sliderValueProvider = StateProvider<int>((ref) => 20);
