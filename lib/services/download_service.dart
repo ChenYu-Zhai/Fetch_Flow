@@ -28,7 +28,7 @@ class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
   final Downloader downloader;
   final Ref ref;
   DownloadNotifier(this.downloader, this.ref) : super({});
-
+  final Map<String, Stopwatch> _progressTrackers = {};
   Future<void> downloadPost(UnifiedPostModel post) async {
     if (state[post.id]?.status == DownloadStatus.downloading ||
         state[post.id]?.status == DownloadStatus.downloaded) {
@@ -53,21 +53,26 @@ class DownloadNotifier extends StateNotifier<Map<String, DownloadInfo>> {
           );
         }
         final savePath = '$saveDirectoryPath/$mediaFileName';
-
+        _progressTrackers[post.id] = Stopwatch()..start();
         await _dio.download(
           post.fullImageUrl,
           savePath,
           onReceiveProgress: (received, total) {
             if (total != -1) {
-              final progress = received / total;
-              _updateStatus(
-                post.id,
-                DownloadStatus.downloading,
-                progress: progress,
-              );
+              final stopwatch = _progressTrackers[post.id]!;
+              if (stopwatch.elapsedMilliseconds > 100) {
+                final progress = received / total;
+                _updateStatus(
+                  post.id,
+                  DownloadStatus.downloading,
+                  progress: progress,
+                );
+                stopwatch.reset();
+              }
             }
           },
         );
+        _progressTrackers.remove(post.id)?.stop();
       }
 
       final textContent = _getTextToCopy(post);
