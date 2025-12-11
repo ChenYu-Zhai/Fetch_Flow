@@ -399,21 +399,15 @@ CivitaiImageModel _$CivitaiImageModelFromJson(Map<String, dynamic> json) {
 mixin _$CivitaiImageModel {
   int get id => throw _privateConstructorUsedError;
   String get url => throw _privateConstructorUsedError;
-  String? get hash =>
-      throw _privateConstructorUsedError; // Use @Default to provide default values for potentially missing fields, enhancing robustness.
-  // 使用 @Default 为可能缺失的字段提供默认值，增强鲁棒性。
+  @ForceStringConverter()
+  String? get hash => throw _privateConstructorUsedError;
   int get width => throw _privateConstructorUsedError;
   int get height => throw _privateConstructorUsedError;
   bool get nsfw => throw _privateConstructorUsedError;
-  String? get username =>
-      throw _privateConstructorUsedError; // Author name from the API.
-  // Use @JsonKey to map the JSON field 'type' to our 'type' property.
-  // unknownEnumValue ensures the app doesn't crash if the API returns an unrecognized type.
-  // 使用 @JsonKey 将 JSON 字段 'type' 映射到我们的 'type' 属性。
-  // unknownEnumValue 确保即使 API 返回了我们不认识的新类型，应用也不会崩溃。
+  @ForceStringConverter()
+  String? get username => throw _privateConstructorUsedError; // Author name from the API.
   @JsonKey(unknownEnumValue: MediaType.image)
-  MediaType get type => throw _privateConstructorUsedError; // Directly use our refactored freezed classes.
-  // 类型直接使用我们重构后的 freezed 类。
+  MediaType get type => throw _privateConstructorUsedError;
   ImageMeta? get meta => throw _privateConstructorUsedError;
   ImageStats? get stats => throw _privateConstructorUsedError;
 
@@ -437,11 +431,11 @@ abstract class $CivitaiImageModelCopyWith<$Res> {
   $Res call({
     int id,
     String url,
-    String? hash,
+    @ForceStringConverter() String? hash,
     int width,
     int height,
     bool nsfw,
-    String? username,
+    @ForceStringConverter() String? username,
     @JsonKey(unknownEnumValue: MediaType.image) MediaType type,
     ImageMeta? meta,
     ImageStats? stats,
@@ -565,11 +559,11 @@ abstract class _$$CivitaiImageModelImplCopyWith<$Res>
   $Res call({
     int id,
     String url,
-    String? hash,
+    @ForceStringConverter() String? hash,
     int width,
     int height,
     bool nsfw,
-    String? username,
+    @ForceStringConverter() String? username,
     @JsonKey(unknownEnumValue: MediaType.image) MediaType type,
     ImageMeta? meta,
     ImageStats? stats,
@@ -659,11 +653,11 @@ class _$CivitaiImageModelImpl extends _CivitaiImageModel {
   const _$CivitaiImageModelImpl({
     required this.id,
     required this.url,
-    required this.hash,
+    @ForceStringConverter() required this.hash,
     this.width = 1024,
     this.height = 1024,
     this.nsfw = false,
-    this.username,
+    @ForceStringConverter() this.username,
     @JsonKey(unknownEnumValue: MediaType.image) required this.type,
     this.meta,
     this.stats,
@@ -677,9 +671,8 @@ class _$CivitaiImageModelImpl extends _CivitaiImageModel {
   @override
   final String url;
   @override
+  @ForceStringConverter()
   final String? hash;
-  // Use @Default to provide default values for potentially missing fields, enhancing robustness.
-  // 使用 @Default 为可能缺失的字段提供默认值，增强鲁棒性。
   @override
   @JsonKey()
   final int width;
@@ -690,17 +683,12 @@ class _$CivitaiImageModelImpl extends _CivitaiImageModel {
   @JsonKey()
   final bool nsfw;
   @override
+  @ForceStringConverter()
   final String? username;
   // Author name from the API.
-  // Use @JsonKey to map the JSON field 'type' to our 'type' property.
-  // unknownEnumValue ensures the app doesn't crash if the API returns an unrecognized type.
-  // 使用 @JsonKey 将 JSON 字段 'type' 映射到我们的 'type' 属性。
-  // unknownEnumValue 确保即使 API 返回了我们不认识的新类型，应用也不会崩溃。
   @override
   @JsonKey(unknownEnumValue: MediaType.image)
   final MediaType type;
-  // Directly use our refactored freezed classes.
-  // 类型直接使用我们重构后的 freezed 类。
   @override
   final ImageMeta? meta;
   @override
@@ -766,11 +754,11 @@ abstract class _CivitaiImageModel extends CivitaiImageModel {
   const factory _CivitaiImageModel({
     required final int id,
     required final String url,
-    required final String? hash,
+    @ForceStringConverter() required final String? hash,
     final int width,
     final int height,
     final bool nsfw,
-    final String? username,
+    @ForceStringConverter() final String? username,
     @JsonKey(unknownEnumValue: MediaType.image) required final MediaType type,
     final ImageMeta? meta,
     final ImageStats? stats,
@@ -785,8 +773,8 @@ abstract class _CivitaiImageModel extends CivitaiImageModel {
   @override
   String get url;
   @override
-  String? get hash; // Use @Default to provide default values for potentially missing fields, enhancing robustness.
-  // 使用 @Default 为可能缺失的字段提供默认值，增强鲁棒性。
+  @ForceStringConverter()
+  String? get hash;
   @override
   int get width;
   @override
@@ -794,15 +782,11 @@ abstract class _CivitaiImageModel extends CivitaiImageModel {
   @override
   bool get nsfw;
   @override
+  @ForceStringConverter()
   String? get username; // Author name from the API.
-  // Use @JsonKey to map the JSON field 'type' to our 'type' property.
-  // unknownEnumValue ensures the app doesn't crash if the API returns an unrecognized type.
-  // 使用 @JsonKey 将 JSON 字段 'type' 映射到我们的 'type' 属性。
-  // unknownEnumValue 确保即使 API 返回了我们不认识的新类型，应用也不会崩溃。
   @override
   @JsonKey(unknownEnumValue: MediaType.image)
-  MediaType get type; // Directly use our refactored freezed classes.
-  // 类型直接使用我们重构后的 freezed 类。
+  MediaType get type;
   @override
   ImageMeta? get meta;
   @override
