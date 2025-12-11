@@ -33,11 +33,11 @@ _$CivitaiImageModelImpl _$$CivitaiImageModelImplFromJson(
 ) => _$CivitaiImageModelImpl(
   id: (json['id'] as num).toInt(),
   url: json['url'] as String,
-  hash: json['hash'] as String?,
+  hash: const ForceStringConverter().fromJson(json['hash']),
   width: (json['width'] as num?)?.toInt() ?? 1024,
   height: (json['height'] as num?)?.toInt() ?? 1024,
   nsfw: json['nsfw'] as bool? ?? false,
-  username: json['username'] as String?,
+  username: const ForceStringConverter().fromJson(json['username']),
   type: $enumDecode(
     _$MediaTypeEnumMap,
     json['type'],
@@ -56,11 +56,11 @@ Map<String, dynamic> _$$CivitaiImageModelImplToJson(
 ) => <String, dynamic>{
   'id': instance.id,
   'url': instance.url,
-  'hash': instance.hash,
+  'hash': const ForceStringConverter().toJson(instance.hash),
   'width': instance.width,
   'height': instance.height,
   'nsfw': instance.nsfw,
-  'username': instance.username,
+  'username': const ForceStringConverter().toJson(instance.username),
   'type': _$MediaTypeEnumMap[instance.type]!,
   'meta': instance.meta,
   'stats': instance.stats,

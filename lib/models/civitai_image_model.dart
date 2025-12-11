@@ -1,6 +1,7 @@
 // lib/models/civitai_image_model.dart
 
 import 'package:featch_flow/models/unified_post_model.dart';
+import 'package:featch_flow/utils/json_converters.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 // Import our single MediaType definition to avoid type conflicts.
 // 导入我们唯一的 MediaType 定义，避免类型冲突。
@@ -31,8 +32,6 @@ class ImageMeta with _$ImageMeta {
     @JsonKey(name: 'tags') @Default(<String>[]) List<String>? tags,
   }) = _ImageMeta;
 
-  // Entry point for the code generator to create _$ImageMetaFromJson.
-  // 这一行是代码生成器的入口，它会为我们创建 _$ImageMetaFromJson。
   factory ImageMeta.fromJson(Map<String, dynamic> json) =>
       _$ImageMetaFromJson(json);
 }
@@ -48,22 +47,13 @@ class CivitaiImageModel with _$CivitaiImageModel {
   const factory CivitaiImageModel({
     required int id,
     required String url,
-    required String? hash,
+    @ForceStringConverter() required String? hash,
 
-    // Use @Default to provide default values for potentially missing fields, enhancing robustness.
-    // 使用 @Default 为可能缺失的字段提供默认值，增强鲁棒性。
     @Default(1024) int width,
     @Default(1024) int height,
     @Default(false) bool nsfw,
-    String? username, // Author name from the API.
-    // Use @JsonKey to map the JSON field 'type' to our 'type' property.
-    // unknownEnumValue ensures the app doesn't crash if the API returns an unrecognized type.
-    // 使用 @JsonKey 将 JSON 字段 'type' 映射到我们的 'type' 属性。
-    // unknownEnumValue 确保即使 API 返回了我们不认识的新类型，应用也不会崩溃。
+    @ForceStringConverter() String? username, // Author name from the API.
     @JsonKey(unknownEnumValue: MediaType.image) required MediaType type,
-
-    // Directly use our refactored freezed classes.
-    // 类型直接使用我们重构后的 freezed 类。
     ImageMeta? meta,
     ImageStats? stats,
   }) = _CivitaiImageModel;
