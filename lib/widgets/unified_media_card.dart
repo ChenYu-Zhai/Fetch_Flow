@@ -49,37 +49,36 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
       builder: (context, isDragging, __) {
         final mediaContent = _buildMediaContent(isDragging);
 
-        return Container(
-          color: Theme.of(context).canvasColor,
-          child: RepaintBoundary(
-            child: Column(
-              children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Hero(
-                          tag: widget.post.id,
-                          child: Center(child: mediaContent),
-                        ),
+        return RepaintBoundary(
+          child: Column(
+            children: [
+              AspectRatio (
+                aspectRatio: widget.post.width / widget.post.height,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Positioned.fill(
+                      child: Hero(
+                        tag: widget.post.id,
+                        child: mediaContent,
                       ),
-                      _MediaOverlay(
-                        post: widget.post,
-                        isVisible: !isDragging,
-                        isHovering: _isHovering,
-                        onTap: () => openFloatingPreview(ref, widget.post),
-                        badgeText: badgeText,
-                        hoverInfoText: hoverInfoText,
-                      ),
-                    ],
-                  ),
+                    ),
+                    _MediaOverlay(
+                      post: widget.post,
+                      isVisible: !isDragging,
+                      isHovering: _isHovering,
+                      onTap: () => openFloatingPreview(ref, widget.post),
+                      badgeText: badgeText,
+                      hoverInfoText: hoverInfoText,
+                    ),
+                  ],
                 ),
-                _AnimatedFooter(
-                  isVisible: !isDragging,
-                  child: _buildButtonBar(),
-                ),
-              ],
-            ),
+              ),
+              _AnimatedFooter(
+                isVisible: !isDragging,
+                child: _buildButtonBar(),
+              ),
+            ],
           ),
         );
       },
@@ -98,7 +97,6 @@ class _UnifiedMediaCardState extends ConsumerState<UnifiedMediaCard> {
     return VisibilityDetector(
       key: ValueKey(widget.post.id),
       onVisibilityChanged: (info) {
-        // 你的逻辑
       },
       child: ImageRenderer(
         imageUrl: widget.post.previewImageUrl,

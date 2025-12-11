@@ -24,7 +24,6 @@ class UnifiedGalleryScreen extends ConsumerStatefulWidget {
 class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
   final ScrollController _scrollController = ScrollController();
 
-
   Timer? _fetchThrottleTimer;
   Timer? _preloadThrottleTimer;
   final ValueNotifier<bool> _isDraggingNotifier = ValueNotifier<bool>(
@@ -70,6 +69,7 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
       },
     );
   }
+
   void _fetchNextPageThrottled() {
     if (_fetchThrottleTimer?.isActive ?? false) return;
     _fetchThrottleTimer = Timer(const Duration(milliseconds: 500), () {
@@ -163,36 +163,10 @@ class _UnifiedGalleryScreenState extends ConsumerState<UnifiedGalleryScreen> {
               }
 
               final post = state.posts[index];
-
-              // 1. 计算媒体部分本身的宽高比
-              final mediaAspectRatio = post.width / post.height;
-
-              // 2. 估算卡片的总宽高比
-              //    我们需要知道卡片的宽度来计算总高度
-              final crossAxisCount = ref.read(crossAxisCountNotifierProvider);
-              final screenWidth = MediaQuery.of(context).size.width;
-              const crossAxisSpacing = 4.0;
-              const padding = 8.0 * 2; // GridView 的 padding
-              final cardWidth =
-                  (screenWidth -
-                      padding -
-                      crossAxisSpacing * (crossAxisCount - 1)) /
-                  crossAxisCount;
-
-              // 媒体部分的高度
-              final mediaHeight = cardWidth / mediaAspectRatio;
-              // 卡片总高度
-              final totalCardHeight = mediaHeight + kCardFooterHeight;
-              // 卡片总宽高比
-              final totalAspectRatio = cardWidth / totalCardHeight;
-
-              return AspectRatio(
-                key: ValueKey(post.id),
-                aspectRatio: totalAspectRatio,
-                child: UnifiedMediaCard(
-                  post: post,
-                  isDraggingNotifier: _isDraggingNotifier,
-                ),
+              return UnifiedMediaCard(
+                key: ValueKey(post.id), // Key 移到这里
+                post: post,
+                isDraggingNotifier: _isDraggingNotifier,
               );
             },
           ),
