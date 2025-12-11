@@ -19,6 +19,32 @@ final civitaiRepositoryProvider = Provider<CivitaiRepositoryAdapter>((ref) {
 
 List<CivitaiImageModel> _parseCivitaiImages(Map<String, dynamic> data) {
   final items = data['items'] as List;
+  //插入一个模拟数据以测试 ForceStringConverter是否起作用
+  // items.insert(0, {
+  //   // 1. 必填字段 (required int id)
+  //   "id": 12345,
+
+  //   // 2. 必填字段 (required String url)
+  //   "url": "https://example.com/image.jpg",
+
+  //   // 3. 必填字段 (required String? hash) - 这里故意用 int 测试您的 Converter
+  //   "hash": 2872557401228,
+
+  //   // 4. 必填字段 (required MediaType type) - ✅ 之前报错就是缺了这个！
+  //   // 必须是 "image", "video", 或 "gif"
+  //   "type": "image",
+
+  //   // --- 以下是可选字段或带有默认值的字段 ---
+  //   "width": 1024,
+  //   "height": 1024,
+  //   "nsfw": false,
+
+  //   // 这里的 username 也故意用 int 测试 Converter
+  //   "username": 9527,
+
+  //   "meta": {"prompt": "Test prompt"},
+  //   "stats": {"likeCount": 100},
+  // });
   return items.map((json) => CivitaiImageModel.fromJson(json)).toList();
 }
 
