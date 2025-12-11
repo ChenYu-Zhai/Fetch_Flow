@@ -39,7 +39,7 @@ class Rule34ApiService {
         'q': 'index',
         'json': 1,
         'pid': page,
-        'limit': 200,
+        'limit': 100,
         'tags': tags,
         'api_key': apiKey,
         'user_id': userId,
