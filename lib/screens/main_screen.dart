@@ -1,6 +1,7 @@
 // lib/screens/main_screen.dart
 
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:featch_flow/providers/unified_gallery_provider.dart';
 import 'package:featch_flow/screens/settings_screen.dart';
@@ -135,7 +136,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     return Scaffold(
       body: Column(
         children: [
-          const CustomTitleBar(),
+          if(!kIsWeb )
+            const CustomTitleBar(),
 
           Expanded(
             child: Scaffold(
